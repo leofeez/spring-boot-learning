@@ -1,4 +1,4 @@
-package com.leofee.springbootlearningfilter.properties;
+package com.leofee.springbootlearningweb.properties;
 
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;

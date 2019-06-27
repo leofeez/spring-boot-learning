@@ -1,4 +1,4 @@
-package com.leofee.springbootlearningfilter.configuration;
+package com.leofee.springbootlearningweb.configuration;
 
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,7 +15,7 @@ import java.io.Serializable;
  * <code>@PropertySource("classpath:myApplication.properties")</code> 注解的方式指定配置文件的路径,
  * 并且需要在对应绑定的 java bean 上加上 <code>@Configuration</code> 表明这是一个配置, 这样 Spring boot
  * 会自动实例化该配置对象, 然后我们在其他地方直接注入该对象即可使用对应的配置,
- * 例如 {@link com.leofee.springbootlearningfilter.controller.HelloWorldController}
+ * 例如 {@link com.leofee.springbootlearningweb.controller.HelloWorldController}
  *
  * <p>
  * 在注入配置的对象的地方, 类上必须加上 <code>@EnableConfigurationProperties</code>

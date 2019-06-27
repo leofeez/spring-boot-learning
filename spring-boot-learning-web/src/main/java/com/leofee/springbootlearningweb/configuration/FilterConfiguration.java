@@ -1,6 +1,6 @@
-package com.leofee.springbootlearningfilter.configuration;
+package com.leofee.springbootlearningweb.configuration;
 
-import com.leofee.springbootlearningfilter.filter.SecondHelloWorldFilter;
+import com.leofee.springbootlearningweb.filter.SecondHelloWorldFilter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

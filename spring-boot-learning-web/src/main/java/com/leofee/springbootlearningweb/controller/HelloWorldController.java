@@ -1,7 +1,7 @@
-package com.leofee.springbootlearningfilter.controller;
+package com.leofee.springbootlearningweb.controller;
 
-import com.leofee.springbootlearningfilter.configuration.MyPropertiesConfiguration;
-import com.leofee.springbootlearningfilter.properties.User;
+import com.leofee.springbootlearningweb.configuration.MyPropertiesConfiguration;
+import com.leofee.springbootlearningweb.properties.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.web.bind.annotation.RequestMapping;
