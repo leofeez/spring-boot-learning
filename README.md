@@ -70,15 +70,20 @@ spring.jpa.show-sql= true
   
 <li>4.validate：每次加载 hibernate 时，验证创建数据库表结构，只会和数据库中的表进行比较，不会创建新表，但是会插入新值。
 </ul>
+
 ### 3.3 配置完成后新建一个实体和实体对应的Dao
-#### 1. Dao 继承 JpaRepository 就可以使用已经定义好的基本的增删改查
+
+<ul>
+  <li> 1. Dao 继承 JpaRepository 就可以使用已经定义好的基本的增删改查
+    
 ```
 public interface PersonDao extends JpaRepository<Person, Long> {
 
     List<Person> findByName(String name);
 }
 ```
-#### 2.在controller里调用
+  <li> 2.在controller里调用
+
 ```
 @RestController
 public class PersonController {
@@ -97,7 +102,8 @@ public class PersonController {
     }
 }
 ```
-#### 3.利用mock mvc 的方式测试一下
+<li> 3.利用mock mvc 的方式测试一下
+  
 ```
 @AutoConfigureMockMvc
 @SpringBootTest
@@ -129,3 +135,4 @@ public class PersonControllerTest {
     }
 }
 ```
+</ul>
