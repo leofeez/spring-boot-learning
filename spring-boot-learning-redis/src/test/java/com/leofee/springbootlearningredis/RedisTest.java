@@ -1,6 +1,5 @@
 package com.leofee.springbootlearningredis;
 
-import com.leofee.springbootlearningredis.persist.entity.Person;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -8,7 +7,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 /**
@@ -34,14 +32,14 @@ public class RedisTest {
         Assert.assertEquals("leofee", stringRedisTemplate.opsForValue().get("name"));
     }
 
-    @Test
-    public void getPerson() throws Exception {
-        Person person = new Person();
-        person.setName("小明");
-        person.setId(2L);
-        person.setAge(29);
-
-        ValueOperations operation = redisTemplate.opsForValue();
-        operation.set("person1", "");
-    }
+//    @Test
+//    public void getPerson() throws Exception {
+//        Person person = new Person();
+//        person.setName("小明");
+//        person.setId(2L);
+//        person.setAge(29);
+//
+//        ValueOperations operation = redisTemplate.opsForValue();
+//        operation.set("person1", "");
+//    }
 }
