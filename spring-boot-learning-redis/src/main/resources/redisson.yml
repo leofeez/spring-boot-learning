@@ -1,0 +1,4 @@
+redisson:
+  address: redis://127.0.0.1
+  password:
+  master-name: mymaster
