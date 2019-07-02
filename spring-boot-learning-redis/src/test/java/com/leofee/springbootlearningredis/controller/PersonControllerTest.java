@@ -41,7 +41,15 @@ public class PersonControllerTest {
     public void savePerson() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/savePerson")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"name\":\"小明\",\"sex\":\"male\",\"age\":25}"))
+                .content("{\"name\":\"leofee\",\"sex\":\"male\",\"age\":25}"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void updatePerson() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/savePerson")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"id\":5, \"name\":\"leofee\",\"sex\":\"male\",\"age\":25}"))
                 .andExpect(status().isOk());
     }
 }
