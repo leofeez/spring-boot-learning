@@ -52,4 +52,18 @@ public class PersonControllerTest {
                 .content("{\"id\":5, \"name\":\"leofee\",\"sex\":\"male\",\"age\":25}"))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    public void deletePerson() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.post("/deletePerson")
+                .contentType(MediaType.APPLICATION_JSON)
+                .param("personId", "1"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void deleteAllPerson() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/deleteAll"))
+                .andExpect(status().isOk());
+    }
 }
