@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Example;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,6 +33,7 @@ public class PersonController {
 //        return personDao.findById(personId).orElseGet(Person::new);
     }
 
+    @CachePut(key = "'person_' + #person.id", value = "#person")
     @RequestMapping("/savePerson")
     public void savePerson(@RequestBody Person person) {
         personDao.save(person);

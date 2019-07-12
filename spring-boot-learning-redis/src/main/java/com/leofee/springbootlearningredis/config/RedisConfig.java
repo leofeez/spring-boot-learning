@@ -7,7 +7,6 @@ import com.fasterxml.jackson.annotation.PropertyAccessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.redisson.spring.data.connection.RedissonConnectionFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CachingConfigurerSupport;
@@ -58,7 +57,7 @@ public class RedisConfig extends CachingConfigurerSupport {
      * 2. lettuce , {@link LettuceConnectionFactory}，高级Redis客户端，
      * 用于线程安全同步，异步和响应使用，支持集群，Sentinel，管道和编码器。
      *
-     * 3. redisson , {@link RedissonConnectionFactory} , 此处就是用的 redisson
+     * 3. redisson , RedissonConnectionFactory
      * 促使使用者对Redis的关注分离，提供很多分布式相关操作服务，例如，分布式锁，分布式集合
      * ，可通过Redis支持延迟队列
      *
@@ -66,7 +65,7 @@ public class RedisConfig extends CachingConfigurerSupport {
      * @return redis template
      */
     @Bean
-    public RedisTemplate redisTemplate(RedissonConnectionFactory connectionFactory) {
+    public RedisTemplate redisTemplate(RedisConnectionFactory connectionFactory) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();
 
@@ -116,7 +115,7 @@ public class RedisConfig extends CachingConfigurerSupport {
      * @return 默认的缓存
      */
     @Bean
-    public CacheManager cacheManager(RedissonConnectionFactory connectionFactory) {
+    public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
 
         // key 序列化方式
         RedisSerializer<String> redisSerializer = new StringRedisSerializer();

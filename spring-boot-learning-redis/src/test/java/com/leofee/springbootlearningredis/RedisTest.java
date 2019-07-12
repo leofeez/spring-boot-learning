@@ -41,14 +41,12 @@ public class RedisTest {
         Assert.assertEquals("leofee", stringRedisTemplate.opsForValue().get("name"));
     }
 
-//    @Test
-//    public void getPerson() throws Exception {
-//        Person person = new Person();
-//        person.setName("小明");
-//        person.setId(2L);
-//        person.setAge(29);
-//
-//        ValueOperations operation = redisTemplate.opsForValue();
-//        operation.set("person1", "");
-//    }
+
+    @Test
+    public void getPerson() throws Exception {
+
+        Person person = redisTemplate.opsForValue().get("person::person_5");
+
+        System.out.println(person == null ? null : person.toString());
+    }
 }
