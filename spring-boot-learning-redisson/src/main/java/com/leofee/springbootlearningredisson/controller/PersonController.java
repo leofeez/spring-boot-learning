@@ -1,8 +1,8 @@
-package com.leofee.springbootlearningredis.controller;
+package com.leofee.springbootlearningredisson.controller;
 
 
-import com.leofee.springbootlearningredis.persist.dao.PersonDao;
-import com.leofee.springbootlearningredis.persist.entity.Person;
+import com.leofee.springbootlearningredisson.persist.dao.PersonDao;
+import com.leofee.springbootlearningredisson.persist.entity.Person;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheConfig;
