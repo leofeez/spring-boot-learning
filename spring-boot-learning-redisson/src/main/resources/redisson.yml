@@ -34,5 +34,6 @@ singleServerConfig:
   connectionPoolSize: 64
 threads: 0
 nettyThreads: 0
-#codec: !<org.redisson.codec.JsonJacksonCodec> {}
+#codec:
+#  class: org.redisson.codec.JsonJacksonCodec
 transportMode: "NIO"
