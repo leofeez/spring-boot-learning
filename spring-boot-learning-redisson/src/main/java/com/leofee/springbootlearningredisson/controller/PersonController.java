@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @Slf4j
 @RestController
 public class PersonController {
@@ -24,11 +26,20 @@ public class PersonController {
 
     @RequestMapping("/getPerson")
     public Person getPerson(Long personId) {
-        return redissonHelper.getCachedObjectOrElseFromDB(
+        return redissonHelper.getCachedObjectOrElseGet(
                 CACHE_KEY_PERSON.concat(personId.toString()),
-                Person.class,
-                personId,
-                result -> personDao.findById(personId).orElseGet(Person::new));
+                Person.class, () -> personDao.findById(personId).orElseGet(Person::new));
+    }
+
+    @RequestMapping("/getPersonList")
+    public List<Person> getPersonList(String name) {
+
+        Person condition = new Person();
+        condition.setName(name);
+
+        return redissonHelper.getCachedListOrElseGet(
+                CACHE_KEY_PERSON.concat(name),
+                Person.class, () -> personDao.findByName(name));
     }
 
     @RequestMapping("/savePerson")
