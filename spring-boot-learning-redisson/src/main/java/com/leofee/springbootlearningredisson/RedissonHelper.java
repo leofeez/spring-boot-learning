@@ -28,16 +28,15 @@ public class RedissonHelper {
      * <b>缓存未命中则 {@code return null}</b>
      *
      * @param cacheKey 缓存的 key
-     * @param clazz    需要返回的对象类型
      * @param <T>      返回值类型
      * @return 缓存的 value, 缓存未命中则 {@code return null}
      */
-    public <T> T getCachedObjectOrElseNull(String cacheKey, Class<T> clazz) {
-        RBucket<String> bucket = redissonClient.getBucket(cacheKey);
+    public <T> T getCachedObjectOrElseNull(String cacheKey) {
+        RBucket<T> bucket = redissonClient.getBucket(cacheKey);
         if (bucket.get() == null) {
             return null;
         }
-        return JSON.parseObject(bucket.get(), clazz);
+        return bucket.get();
     }
 
     /**
@@ -47,14 +46,13 @@ public class RedissonHelper {
      * 并且将查询的数据放入缓存中
      *
      * @param cacheKey 缓存的key
-     * @param clazz    需要返回的对象类型
      * @param supplier 未命中缓存后，执行从DB中查询的逻辑
      * @param <T>      返回值类型
      * @return 缓存的value, 缓存为命中则执行 supplier 返回
      */
-    public <T> T getCachedObjectOrElseGet(String cacheKey, Class<T> clazz, @NotNull Supplier<T> supplier) {
+    public <T> T getCachedObjectOrElseGet(String cacheKey, @NotNull Supplier<T> supplier) {
         T result;
-        RBucket<String> bucket = redissonClient.getBucket(cacheKey);
+        RBucket<T> bucket = redissonClient.getBucket(cacheKey);
         if (bucket.get() == null) {
             result = supplier.get();
             // 加入到缓存中
@@ -62,7 +60,7 @@ public class RedissonHelper {
                 cacheObject(cacheKey, result);
             }
         } else {
-            result = JSON.parseObject(bucket.get(), clazz);
+            result = bucket.get();
         }
         return result;
     }
@@ -74,13 +72,12 @@ public class RedissonHelper {
      * 并且将查询的数据放入缓存中
      *
      * @param cacheKey 缓存的key
-     * @param clazz    需要返回的对象类型
      * @param <T>      返回值类型
-     * @return 缓存的List, 缓存为命中则执行 function
+     * @return 缓存的List, 缓存为命中则执行 supplier 返回
      */
-    public <T> List<T> getCachedListOrElseGet(String cacheKey, Class<T> clazz, @NotNull Supplier<List<T>> supplier) {
+    public <T> List<T> getCachedListOrElseGet(String cacheKey, @NotNull Supplier<List<T>> supplier) {
         List<T> result;
-        RBucket<String> bucket = redissonClient.getBucket(cacheKey);
+        RBucket<List<T>> bucket = redissonClient.getBucket(cacheKey);
         if (bucket.get() == null) {
             result = supplier.get();
             // 加入到缓存中
@@ -88,7 +85,7 @@ public class RedissonHelper {
                 cacheObject(cacheKey, result);
             }
         } else {
-            result = JSON.parseArray(bucket.get(), clazz);
+            result = bucket.get();
         }
         return result;
     }
@@ -99,13 +96,13 @@ public class RedissonHelper {
      * @param cacheKey 缓存的key
      * @param value    缓存的value
      */
-    public void cacheObject(String cacheKey, Object value) {
+    public <T> void cacheObject(String cacheKey, T value) {
         if (value == null) {
             log.info("cacheKey [{}] , value 为 null !", cacheKey);
             return;
         }
         RBucket<Object> bucket = redissonClient.getBucket(cacheKey);
-        bucket.set(JSON.toJSONString(value));
+        bucket.set(value);
     }
 
     /**

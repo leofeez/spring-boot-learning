@@ -22,13 +22,13 @@ public class PersonController {
     @Autowired
     private RedissonHelper redissonHelper;
 
-    private static final String CACHE_KEY_PERSON = "person::person_";
+    private static final String CACHE_KEY_PERSON = "person:person:";
 
     @RequestMapping("/getPerson")
     public Person getPerson(Long personId) {
         return redissonHelper.getCachedObjectOrElseGet(
                 CACHE_KEY_PERSON.concat(personId.toString()),
-                Person.class, () -> personDao.findById(personId).orElseGet(Person::new));
+                () -> personDao.findById(personId).orElseGet(Person::new));
     }
 
     @RequestMapping("/getPersonList")
@@ -39,7 +39,7 @@ public class PersonController {
 
         return redissonHelper.getCachedListOrElseGet(
                 CACHE_KEY_PERSON.concat(name),
-                Person.class, () -> personDao.findByName(name));
+                () -> personDao.findByName(name));
     }
 
     @RequestMapping("/savePerson")
