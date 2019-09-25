@@ -11,7 +11,7 @@
 ## spring-boot web
 - [spring-boot-web](https://github.com/leofeez/spring-boot-learning/tree/master/spring-boot-learning-web)
    - spring-boot 整合进行web 开发。
-   - spring-boot 整合 spring-data-jap。
+   - spring-boot 整合 spring-data-jpa。
 
 ## spring-boot redis
 - [spring-boot-redis](https://github.com/leofeez/spring-boot-learning/tree/master/spring-boot-learning-redis)
