@@ -22,22 +22,23 @@ spring-boot 项目的启动入口都是项目路径下的带有 ``@SpringBootApp
 
 执行流程如下：  
 
-1 . 通过``SpringApplication`` 构造方法实例化 SpringApplication，
+1 . 通过``SpringApplication`` 构造方法实例化 SpringApplication
 ```
     public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
-   		this.resourceLoader = resourceLoader;
-   		Assert.notNull(primarySources, "PrimarySources must not be null");
-   		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+   		......
+   		// 1. 确定上下文类型(如 web 项目 则类型为 SERVLET)
    		this.webApplicationType = WebApplicationType.deduceFromClasspath();
-   		// 实例化 ApplicationContextInitializer
+   		
+   		// 2. 实例化 ApplicationContextInitializer
    		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
-   		// 实例化 ApplicationListener
+   		
+   		// 3. 实例化 ApplicationListener
    		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
-   		this.mainApplicationClass = deduceMainApplicationClass();
+        ......
    	}
 ```
    	
-在构造方法中会去项目路径下，从 `META-INF/spring.factories` 文件中加载并实例化实现了 `ApplicationContextInitializer`，`ApplicationListener` 的配置类。
+构造方法中会通过`SpringFactoriesLoader`去项目路径下，从 `META-INF/spring.factories` 文件中加载并实例化实现了 `ApplicationContextInitializer`，`ApplicationListener` 的配置类。
 ```
 public final class SpringFactoriesLoader {
     private static Map<String, List<String>> loadSpringFactories(@Nullable ClassLoader classLoader) {
@@ -47,5 +48,63 @@ public final class SpringFactoriesLoader {
     }
 }
 ```
+实例化 `SpringApplication` 后开始执行 `run` 方法。
 
+2 . 执行 `run` 方法
+ 
+```
+public ConfigurableApplicationContext run(String... args) {
+    ...
+    
+    // 1. 实例化 SpringApplicationRunListener
+    SpringApplicationRunListeners listeners = getRunListeners(args);
+    
+    // 2. 启动 SpringApplicationRunListener
+    listeners.starting();
+    try {
+        ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
+        // 3. 初始化环境参数
+        ConfigurableEnvironment environment = prepareEnvironment(listeners, applicationArguments);
+        configureIgnoreBeanInfo(environment);
+        Banner printedBanner = printBanner(environment);
+        
+        // 4. 创建容器 ApplicationContext, 默认创建 AnnotationConfigApplicationContext
+        context = createApplicationContext();
+        exceptionReporters = getSpringFactoriesInstances(SpringBootExceptionReporter.class,
+                new Class[] { ConfigurableApplicationContext.class }, context);
+                
+        // 5. 初始化容器
+        prepareContext(context, environment, listeners, applicationArguments, printedBanner);
+        
+        // 6. 刷新容器 ，调用 AbstractApplicationContext.refresh() 方法
+        //    实例化各种 bean
+        refreshContext(context);
+        
+        // 7. 刷新结束(模板方法)
+        afterRefresh(context, applicationArguments);
+        stopWatch.stop();
+        if (this.logStartupInfo) {
+            new StartupInfoLogger(this.mainApplicationClass).logStarted(getApplicationLog(), stopWatch);
+        }
+        // 8. SpringApplicationRunListener 启动
+        listeners.started(context);
+        callRunners(context, applicationArguments);
+    }
+    catch (Throwable ex) {
+        handleRunFailure(context, ex, exceptionReporters, listeners);
+        throw new IllegalStateException(ex);
+    }
 
+    try {
+    
+        // 9. SpringApplicationRunListener 运行
+        listeners.running(context);
+    }
+    catch (Throwable ex) {
+        handleRunFailure(context, ex, exceptionReporters, null);
+        throw new IllegalStateException(ex);
+    }
+    return context;
+}
+
+```
