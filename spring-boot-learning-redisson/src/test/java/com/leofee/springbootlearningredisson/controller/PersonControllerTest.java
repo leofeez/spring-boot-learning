@@ -33,6 +33,14 @@ public class PersonControllerTest {
     }
 
     @Test
+    public void getPersonName() throws Exception {
+        mockMvc.perform(MockMvcRequestBuilders.get("/getPersonName")
+                .contentType(MediaType.APPLICATION_JSON)
+                .param("personId", "8"))
+                .andExpect(status().isOk()).andDo(MockMvcResultHandlers.print());
+    }
+
+    @Test
     public void savePerson() throws Exception {
         mockMvc.perform(MockMvcRequestBuilders.post("/savePerson")
                 .contentType(MediaType.APPLICATION_JSON)

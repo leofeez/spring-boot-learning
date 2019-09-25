@@ -1,4 +1,4 @@
-package com.leofee.springbootlearningredisson;
+package com.leofee.springbootlearningredisson.utils;
 
 import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
@@ -18,14 +18,15 @@ import java.util.function.Supplier;
  */
 @Slf4j
 @Component
-public class RedissonHelper {
+public class RedissonCacheUtils {
 
     @Autowired
     private RedissonClient redissonClient;
 
     /**
      * 根据 KEY 从缓存中获取 value
-     * <b>缓存未命中则 {@code return null}</b>
+     * <p>
+     * 缓存未命中则 {@code return null}
      *
      * @param cacheKey 缓存的 key
      * @param <T>      返回值类型
@@ -42,13 +43,14 @@ public class RedissonHelper {
     /**
      * 根据 KEY 从缓存中获取value
      *
-     * <p> 如果缓存未命中则执行 supplier 逻辑进行数据库查询，
+     * <p>
+     * 如果缓存未命中则执行 supplier 逻辑进行数据库查询，
      * 并且将查询的数据放入缓存中
      *
      * @param cacheKey 缓存的key
      * @param supplier 未命中缓存后，执行从DB中查询的逻辑
      * @param <T>      返回值类型
-     * @return 缓存的value, 缓存为命中则执行 supplier 返回
+     * @return 缓存的value, 缓存未命中则执行 supplier 返回
      */
     public <T> T getCachedObjectOrElseGet(String cacheKey, @NotNull Supplier<T> supplier) {
         T result;
@@ -68,17 +70,18 @@ public class RedissonHelper {
     /**
      * 根据 KEY 从缓存中获取List
      *
-     * <p> 如果缓存未命中则执行 function 逻辑进行数据库查询，
+     * <p>
+     * 如果缓存未命中则执行 supplier 逻辑进行数据库查询，
      * 并且将查询的数据放入缓存中
      *
      * @param cacheKey 缓存的key
      * @param <T>      返回值类型
-     * @return 缓存的List, 缓存为命中则执行 supplier 返回
+     * @return 缓存的List, 缓存未命中则执行 supplier 返回
      */
     public <T> List<T> getCachedListOrElseGet(String cacheKey, @NotNull Supplier<List<T>> supplier) {
         List<T> result;
         RBucket<List<T>> bucket = redissonClient.getBucket(cacheKey);
-        if (bucket.get() == null) {
+        if (bucket.get() == null || bucket.get().size() == 0) {
             result = supplier.get();
             // 加入到缓存中
             if (!CollectionUtils.isEmpty(result)) {
@@ -94,16 +97,39 @@ public class RedissonHelper {
      * 将 value 放入缓存中
      *
      * @param cacheKey 缓存的key
+     * @param supplier 获取缓存的value的逻辑
+     */
+    public <T> void cacheObject(String cacheKey, Supplier<T> supplier) {
+        T value = supplier.get();
+        if (value == null) {
+            if (log.isInfoEnabled()) {
+                log.info("cacheKey [{}] , value 为 null !", cacheKey);
+            }
+            return;
+        }
+        cacheObject(cacheKey, value);
+    }
+
+    /**
+     * 将 value 放入缓存中
+     *
+     * @param cacheKey 缓存的key
      * @param value    缓存的value
      */
-    public <T> void cacheObject(String cacheKey, T value) {
+    public void cacheObject(String cacheKey, Object value) {
         if (value == null) {
-            log.info("cacheKey [{}] , value 为 null !", cacheKey);
+            if (log.isInfoEnabled()) {
+                log.info("cacheKey [{}] , value 为 null !", cacheKey);
+            }
             return;
         }
         RBucket<Object> bucket = redissonClient.getBucket(cacheKey);
+        if (log.isInfoEnabled()) {
+            log.info("cacheKey:[{}], value:[{}]", cacheKey, JSON.toJSONString(value));
+        }
         bucket.set(value);
     }
+
 
     /**
      * 根据 key 删除缓存
