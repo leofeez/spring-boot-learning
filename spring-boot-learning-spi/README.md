@@ -44,6 +44,7 @@ SPI 的机制能够很好的实现组件的可插拔性，让规范与实现相�
    该注解指定接口之后，tomcat 在启动的时候就会去查找`WebApplicationInitializer`接口的所有实现类 class 并放到 `onStartup` 方法参数的 set 集合中。
    
    2 执行 `... onStartup(Set<Class<?>> webAppInitializerClasses, ServletContext servletContext)`：  
+   
    ```
     /**
      *@param webAppInitializerClasses 所有实现 WebApplicationInitializer 接口的实现类 class
@@ -123,6 +124,7 @@ SPI 的机制能够很好的实现组件的可插拔性，让规范与实现相�
   - 创建 Spring 容器 `ConfigurableApplicationContext`
   - Spring 容器的刷新，最终会调用大名鼎鼎的 `refresh()` 方法
   - 监听器的启动
+  具体请见 [spring-boot-starter](https://github.com/leofeez/spring-boot-learning/tree/master/spring-boot-learning-starter)
 
 
 
