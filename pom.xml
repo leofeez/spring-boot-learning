@@ -15,6 +15,7 @@
         <module>spring-boot-learning-base</module>
         <module>spring-boot-learning-redis</module>
         <module>spring-boot-learning-redisson</module>
+        <module>spring-boot-learning-spi</module>
     </modules>
 
 </project>
