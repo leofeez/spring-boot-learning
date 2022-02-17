@@ -45,7 +45,7 @@ public class OrderController {
         try {
 
             log.info("订单：[{}]， 开始锁库存......", orderName);
-            locked = lock.tryLock(5, 3, TimeUnit.SECONDS);
+            locked = lock.tryLock(5, TimeUnit.SECONDS);
 
             if (locked) {
                 orderService.createOrder();

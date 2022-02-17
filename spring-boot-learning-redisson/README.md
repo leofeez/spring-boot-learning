@@ -1,28 +1,14 @@
 # Redisson 分布式锁
 
-在单机情况下，利用JDK提供的锁即可满足，但是在分布式负载均衡的情况下，由于服务器实例之间的锁没办法共享，所以需要Redis作为中间件实现分布式的锁同步机制。
+在单机情况下，利用JDK提供的锁即可满足，但是在分布式负载均衡的情况下，由于服务器实例之间的锁没办法共享，
+所以需要Redis作为中间件实现分布式的锁同步机制。
 
 
+## Redisson原理
 
-## 分布式锁的方案
+Redisson 提供RLock的接口，是继承于Lock，并扩展提供了基于过期释放的特性。
 
-- Redisson
-- Zookeeper
-
-
-
-## Redisson 实现
-
-Redisson 实现锁机制的功能主要体现在以下几个方面：
-
-- 互斥性：利用一个key作为锁标记，存入Redis，value是当前的UUID + 线程ID，当key不存在时才进行加锁
-- 可重入性：利用key的计数实现可重入，类似于ReentrantLock
-- 过期释放，防死锁
-- 当释放锁的时候，只有当前持有锁的线程才能删除key
-
-## 源码分析
-
-首先看一下加锁的代码：
+首先看一段利用Redisson加锁的代码：
 ```java
         String orderName = Thread.currentThread().getName();
         String stockId = UUID.randomUUID().toString();
@@ -33,7 +19,7 @@ Redisson 实现锁机制的功能主要体现在以下几个方面：
         try {
 
             log.info("订单：[{}]， 开始锁库存......", orderName);
-            locked = lock.tryLock(5, 3, TimeUnit.SECONDS);
+            locked = lock.tryLock(5, TimeUnit.SECONDS);
 
             if (locked) {
                 orderService.createOrder();
@@ -78,21 +64,38 @@ Redisson 实现锁机制的功能主要体现在以下几个方面：
     }
     ```
    
-第一步通过 exists 去判断锁的key是否存在，
-第二步如果返回0，则取hset key value 设置key的value，即ARGV[2].
-ARGV[2] 代表的是加锁的客户端的 ID，类似于下面这样：285475da-9152-4c83-822a-67ee2f116a79:52。至于最后面的一个 1 是为了后面可重入做的计数统计
-第三部设置key的存活时间internalLockLeaseTime，这里 ARGV[1] 代表的是锁 key 的默认生存时间，默认 30 秒。
+对于上述的Lua脚本解读如下：
 
-3. 当持有锁的时间超出了锁定有效期，则利用WatchDog 看门狗去定期（默认10秒）去给锁续期。
+第一步通过 `exists key `去判断锁的key是否存在，
+第二步，如果第一步中的判断返回0，表示 key 不存在，这时候可以加锁，利用`hset key value` 设置`key`的`value`，即`ARGV[2]`.
+> ARGV[2] 代表的是加锁的客户端的 ID，类似于下面这样：285475da-9152-4c83-822a-67ee2f116a79:52，在Redisson中即UUID + threadId。
+> 至于最后面的一个 1 是为了后面可重入做的计数统计，类似于AQS中的state。
 
-4. unlock 释放锁
+第三步设置key的存活时间`internalLockLeaseTime`，这里 ARGV[1] 代表的是锁 key 的默认生存时间，默认 30 秒。
+
+如果第一步中的`exists key`判断key已经存在，则利用`hexists key field` 判断当前的客户端ID（即ARG[2]）是否在锁的key对应的hash数据结构中是否存在，
+存在表明是当前客户端持有的锁，这时候就相当于锁重入，就利用`hincrby key field increment`去对锁重入进行 + 1，并通过`pexpire key millseconds`设置过期时间。
+
+如果上述两个if条件都未满足，则`pttl key `返回当前锁的key的剩余存活时间。
+
+3. 从上述描述可以看出，锁的key其实可以设置过期时间的，key一旦过期，redis就会清除这个key，如果当业务处理的时间超出了锁的有效期，这时候锁就会被其他
+   客户端获取成功，会造成数据的不准确，所以在Redisson中还存在一个WatchDog的机制去对去定期（默认10秒）去给锁续期，即当Redis实例还。
+
+4. unlock 释放锁，释放锁的时候需要判断当前的客户端（UUID + threadId）是否持有锁，只有持有锁的客户端才能释放锁。
 
 
 ## Redisson 单机模式下的缺点
-事实上这类琐最大的缺点就是它加锁时只作用在一个Redis节点上，即使Redis通过sentinel保证高可用，
-如果这个master节点由于某些原因发生了主从切换，那么就会出现锁丢失的情况：
+事实上这类琐最大的缺点就是它加锁时只作用在一个Redis节点上，如果Redis挂了，那么就会产生单点故障的问题，
+即使Redis通过sentinel保证高可用，虽然对于master节点发生故障后，可以故障转移，slaver升级为master，
+但由于主从之间的数据同步是异步的， 如果在发生主从切换的时候，key 还没来得及同步到slaver上，那么就会出现锁丢失的情况：
 
    1. 在Redis的master节点上拿到了锁；
    2. 但是这个加锁的key还没有同步到slave节点；
    3. master故障，发生故障转移，slave节点升级为master节点；
    4. 导致锁丢失
+
+所以Redis提供RedLock，即对主节点的Redis进行集群，多个master实例间互相独立，需要对N个实例进行上锁，这里假设有5个Redis集群，
+当获取锁的时候，当且仅当大多数的节点（即 N/2 + 1）都设置锁成功，整个获取锁的过程才算成功，如果没有满足该条件，就需要在向所有的Redis实例发送释放锁命令即可，
+不用关心之前有没有从Redis实例成功获取到锁.
+
+
