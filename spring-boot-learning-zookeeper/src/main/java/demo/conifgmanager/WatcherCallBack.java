@@ -10,16 +10,16 @@ import java.util.concurrent.CountDownLatch;
 
 public class WatcherCallBack  implements Watcher, AsyncCallback.DataCallback, AsyncCallback.StatCallback {
 
-    private ZooKeeper zk;
+    private final ZooKeeper zk;
 
-    private MyConfiguration configuration;
+    private final MyConfiguration configuration;
 
-    private CountDownLatch configLatch;
+    private final CountDownLatch configLatch;
 
-    public WatcherCallBack(ZooKeeper zooKeeper, MyConfiguration configuration, CountDownLatch configLatch) {
+    public WatcherCallBack(ZooKeeper zooKeeper, MyConfiguration configuration, int configCount) {
         this.zk = zooKeeper;
         this.configuration = configuration;
-        this.configLatch = configLatch;
+        this.configLatch = new CountDownLatch(configCount);
     }
 
     @Override
@@ -96,7 +96,14 @@ public class WatcherCallBack  implements Watcher, AsyncCallback.DataCallback, As
                 zk.getData("/port", this, this, "");
             }
         }
+    }
 
+    public void await() {
+        try {
+            configLatch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
 }

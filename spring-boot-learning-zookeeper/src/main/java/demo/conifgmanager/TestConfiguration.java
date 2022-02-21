@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit;
 public class TestConfiguration {
 
     public static void main(String[] args) throws InterruptedException {
-        ZookeeperConfigManager configManager = ZookeeperConfigManager.connect();
-        MyConfiguration configuration = configManager.getConfiguration();
+
+        MyConfiguration configuration = ZookeeperConfigManager.getConfiguration();
 
         while (true) {
             TimeUnit.SECONDS.sleep(2);
