@@ -13,6 +13,15 @@ Zookeeper 一个最常用的使用场景就是用于担任服务生产者和服�
 ## 安装Zookeeper
 
 在集群模式下，首先需要关闭每台机器的防火墙。
+centos 7 关闭防火墙
+systemctl status|stop firewalld.service
+systemctl disabled|enabled firewalld.service
+
+centos 7 修改静态IP
+cd /etc/sysconfig/network-scripts
+vi ifcfg-ens33
+
+
 
 1. wget 下载jdk，并配置环境变量
 2. wget zookeeper，tar xf zookeeper.tar.gz
@@ -32,41 +41,41 @@ Zookeeper 一个最常用的使用场景就是用于担任服务生产者和服�
 
 ## Zookeeper中的关键概念
 
-## Session
+### Session
 
 在Zookeeper中对于客户端的连接是有Session的概念的，当客户端连接到任意一台Zookeeper实例的时候，Zookeeper会分配一个全局唯一的SessionId，注意是全局的，在集群模式下，所有的实例都会保存该SessionId，这样是为了保证在集群模式下，客户端连接任意一台实例都是有效的。
 
 客户端与Zookeeper建立的连接是一个长连接，这样Zookeeper就可以通过心跳的机制去判断客户端是否还保持着连接，而且对于Watch回调，也是通过该连接实现。
 
-当客户端于Zookeeper断开了连接，这时就会进入SessionTimeOut失效的倒计时，默认的SessionTimeOut是介于2**tickTime ~ 20* *tickTime之间。
+当客户端于Zookeeper断开了连接，这时就会进入SessionTimeOut失效的倒计时，默认的SessionTimeOut是介于2**tickTime ~ 20* *tickTime之间（tickTime见zoo.cfg配置文件）。
 
-## 节点Znode
+### 节点Znode
 
 Zookeeper中数据的保存都是在节点上，所以节点也就是zookeeper的数据单元。
 
-Zookeeper中的数据结构类似于文件系统，如/path1/path2...
+Zookeeper中的数据结构类似于文件系统，如/path1/path2...和文件系统不同的是，Zookeeper的节点上可以保存数据，为了Zookeeper的高效，每个节点的数据大小不能超过1M。
 
-Zookeeper的Znode节点类型：
+Zookeeper的Znode节点类型主要分为临时节点（EPHEMERAL）和持久化节点（PERSISTENT）：
 
 - 持久化节点(PERSISTENT)：在节点创建后，除非主动删除，否则会一直存在。
 - 持久化顺序节点(PERSISTENT_SEQUENTIAL)：在持久化节点的特性上额外增加了节点的时序，在父节点下创建子节点时会按照创建顺序给节点名称后追加一个数字后缀用于表示节点的顺序。
 - 临时节点（EPHEMERAL）：临时节点的生命周期是和session的生命周期一致，也就是说当客户端的会话失效后，该临时节点就会被清除，这里要注意的是会话失效，当客户端断开和zookeeper的连接时，只有超过了session的有效期，临时节点才会被删除。
 - 临时顺序节点（EPHEMERAL_SEQUENTIAL）：
 
-关于zookeeper的分布式协调主要分为以下几个特性：
+### Zookeeper中的角色
 
-### 扩展性
+在Zookeeper集群中，一般会设置 奇数 个节点实例，这样才能满足"过半的原则"。Zookeeper对于客户端连接是透明的，客户端连接Zookeeper集群时，是随机连接任意一台实例
 
-要从角色说起，zookeeper的角色主要分为以下几种：
+在Zookeeper中每台实例都有自己的角色，zookeeper的角色主要分为以下几种：
 
-- Leader
-- follower
-- observer
+- **Leader**：负责集群中所有写的事务，并且也支持读，当Zookeeper集群收到写的操作（如 `create, set ,delete`），
+- **Follower**
+- **Observer**
 
 读写分离：
 
-- 只有leader才能写
-- follower只能读，只有follower才能参与选举
+- 只有Leader才能写
+- Follower只能读，只有Follower才能参与选举
 
 ### 可靠性
 
@@ -90,24 +99,28 @@ ZAB是对paxos的一个精简版本。ZAB又称为原子广播协议。
 
 
 
-## 场景
+## Zookeeper Leader选举
 
-### 第一次集群启动
-
-
-
-### Leader 挂了后重启集群
-
-每个节点之间两两通信
+首先在集群模式中，每个实例之间是两两通信的。
 
 Leader的选举规则：
 
 - 先比较zxid，即事务ID
 - 再比较myid
 
-在某个Folloer在接受到任意一个选举Leader投票时，会被动给自己投票，并且如果当前的实力要大于投票者时，会返回自己的实力，并广播给其他Follower。
+在某个Follower在接受到任意一个选举Leader投票时，会被动给自己投票，并且如果当前的实力要大于投票者时，会返回自己的实力，并广播给其他Follower。
 
 ## Watch 机制
 
 watch是一次性的，watch指的是观察并且会产生回调callback。
+
+在Zookeeper的API中，exists ，getData，都支持传入一个Watcher，这样在exists节点存在时，就会触发回调，getData也是在能够获取到节点数据时进行回调。
+
+## Zookeeper 应用
+
+#### 分布式配置管理
+
+
+
+#### 分布式锁
 
