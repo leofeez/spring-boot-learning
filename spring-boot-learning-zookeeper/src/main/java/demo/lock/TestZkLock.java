@@ -1,5 +1,7 @@
 package demo.lock;
 
+import java.util.concurrent.TimeUnit;
+
 public class TestZkLock {
 
     public static void main(String[] args) {
@@ -9,9 +11,18 @@ public class TestZkLock {
             new Thread(() -> {
                 lock.tryLock();
 
+                try {
+                    TimeUnit.SECONDS.sleep(1);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+
                 lock.unlock();
             }).start();
         }
 
+        while (true) {
+
+        }
     }
 }

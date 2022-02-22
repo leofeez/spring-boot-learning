@@ -31,7 +31,7 @@ public class ZookeeperUtil {
         }
         try {
             zk = new ZooKeeper("192.168.248.131:2181,192.168.248.132:2181/config",
-                    3000, DEFAULT_WATCHER);
+                    10000, DEFAULT_WATCHER);
         } catch (IOException e) {
             e.printStackTrace();
         }
