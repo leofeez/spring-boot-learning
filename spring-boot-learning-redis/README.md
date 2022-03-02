@@ -346,15 +346,20 @@ bgrewriteaof 触发AOP持久化
 
 对于单机故障可以利用主从，当master节点发生故障，可以故障转移到slaver，保证可用性。
 
+redis slaver 可以利用 `replicaof <masterhost> <masterport>` 
+
+### 主从之间的数据同步
+当slaver replicaof 之后，master会生成一份RDB的快照传输给slaver并且利用缓冲区记录当前增量的写操作，当slaver收到RDB时会进行flushdb，再load RDB的内容到内存中
+然后再接受master的增量的写操作。
+
+### 哨兵机制
+哨兵机制其实是为了保证redis在主从模式下可用性的一种方案，
 对slaver的选举采用过半的模式，即从实例数量最好为N/2 + 1个。
 
 
 
-`replicaof <masterhost> <masterport>`
 
-主从复制：
 
-当从宕机后重新replicaof后，主实例会生成RDB传输给从，从接收到RDB后先flushdb，在load主传输的RDB到内存中。
 
 ## Redis集群
 
