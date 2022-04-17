@@ -2,6 +2,7 @@ package com.leofee.springbootlearningweb.configuration;
 
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
 
@@ -23,7 +24,8 @@ import java.io.Serializable;
  * @author leofee
  * @date 2019/6/26
  */
-@PropertySource("classpath:myApplication.properties")
+@EnableConfigurationProperties
+@PropertySource(value = {"classpath:myApplication.properties", "classpath:db.yml"})
 @Configuration
 @Data
 public class MyPropertiesConfiguration implements Serializable {

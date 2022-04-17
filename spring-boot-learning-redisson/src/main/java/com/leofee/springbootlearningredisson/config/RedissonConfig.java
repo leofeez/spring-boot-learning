@@ -5,10 +5,10 @@ import org.redisson.api.RedissonClient;
 import org.redisson.client.codec.StringCodec;
 import org.redisson.config.Config;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnResource;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import java.io.File;
 import java.io.IOException;
 
 /**
@@ -22,10 +22,10 @@ public class RedissonConfig {
      *
      * @return redisson client
      */
+    @ConditionalOnResource(resources = "redisson.yml")
     @Bean
-    @ConditionalOnProperty(name = "redisson.address")
     public RedissonClient redissonClient() throws IOException {
-        Config config = Config.fromYAML(new File("redisson.yml"));
+        Config config = Config.fromYAML(RedissonConfig.class.getClassLoader().getResource("redisson.yml"));
         config.setCodec(new StringCodec());
         return Redisson.create(config);
     }

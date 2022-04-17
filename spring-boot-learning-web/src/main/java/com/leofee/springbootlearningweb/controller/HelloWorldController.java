@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
  * @author leofee
  * @date 2019/6/26
  */
-@EnableConfigurationProperties
 @RestController
 public class HelloWorldController {
 

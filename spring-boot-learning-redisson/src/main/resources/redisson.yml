@@ -19,11 +19,11 @@ singleServerConfig:
   #客户端名称
   clientName: null
   #地址
-  address: "redis://localhost:6379"
+  address: "redis://192.168.248.131:6379"
   #数据库编号
   database: 0
   #密码
-  #password: 123456
+  password: 112233
   #发布和订阅连接的最小空闲连接数
   subscriptionConnectionMinimumIdleSize: 1
   #发布和订阅连接池大小
