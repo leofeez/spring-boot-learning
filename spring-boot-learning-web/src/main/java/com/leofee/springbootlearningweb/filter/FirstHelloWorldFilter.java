@@ -24,7 +24,7 @@ import java.io.IOException;
  * @date 2019/6/26
  */
 @Slf4j
-@WebFilter(filterName = "helloWorldFilter", urlPatterns = "/*")
+@WebFilter(filterName = "FirstHelloWorldFilter", urlPatterns = "/*")
 public class FirstHelloWorldFilter implements Filter {
 
     @Override
@@ -36,8 +36,9 @@ public class FirstHelloWorldFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
-        log.info("filter:{} do filter, uri:{}", getClass(), request.getRequestURI());
+        log.info(" before {} do filter, uri:{}", getClass(), request.getRequestURI());
         filterChain.doFilter(servletRequest, servletResponse);
+        log.info("after {} do filter, uri:{}", getClass(), request.getRequestURI());
     }
 
     @Override

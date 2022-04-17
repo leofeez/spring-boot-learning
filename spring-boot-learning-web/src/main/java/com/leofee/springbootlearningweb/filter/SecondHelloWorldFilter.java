@@ -31,8 +31,10 @@ public class SecondHelloWorldFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
             throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
-        log.info("filter:{} do filter, uri:{}", getClass(), request.getRequestURI());
+        log.info("before {} do filter, uri:{}", getClass(), request.getRequestURI());
         filterChain.doFilter(servletRequest, servletResponse);
+
+        log.info("after {} do filter, uri:{}", getClass(), request.getRequestURI());
     }
 
     @Override
