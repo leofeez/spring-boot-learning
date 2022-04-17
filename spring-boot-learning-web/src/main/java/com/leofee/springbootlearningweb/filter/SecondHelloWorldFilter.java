@@ -33,7 +33,6 @@ public class SecondHelloWorldFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         log.info("before {} do filter, uri:{}", getClass(), request.getRequestURI());
         filterChain.doFilter(servletRequest, servletResponse);
-
         log.info("after {} do filter, uri:{}", getClass(), request.getRequestURI());
     }
 
