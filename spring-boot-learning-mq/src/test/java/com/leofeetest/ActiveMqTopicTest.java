@@ -1,6 +1,6 @@
 package com.leofeetest;
 
-import com.leofee.ActiveMqConfig;
+import com.leofee.activemq.ActiveMqConfig;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.junit.Test;
 import org.junit.runner.RunWith;

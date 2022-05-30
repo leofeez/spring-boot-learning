@@ -1,11 +1,13 @@
-package com.leofee;
+package com.leofee.activemq;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.PropertySource;
 
 import javax.jms.Connection;
 
+@PropertySource("classpath:mq.yml")
 @Configuration
 public class ActiveMqConfig {
 

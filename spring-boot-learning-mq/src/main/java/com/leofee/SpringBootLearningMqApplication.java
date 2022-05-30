@@ -7,8 +7,7 @@ import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
 import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 
-@PropertySource("classpath:mq.yml")
-@ServletComponentScan
+@ServletComponentScan(basePackages = "com.leofee")
 @EnableWebMvc
 @SpringBootApplication
 public class SpringBootLearningMqApplication {

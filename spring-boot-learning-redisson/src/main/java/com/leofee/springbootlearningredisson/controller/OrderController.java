@@ -47,7 +47,7 @@ public class OrderController {
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            if (locked) {
+            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }

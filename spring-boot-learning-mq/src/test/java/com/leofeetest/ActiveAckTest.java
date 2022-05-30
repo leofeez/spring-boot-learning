@@ -1,6 +1,6 @@
 package com.leofeetest;
 
-import com.leofee.ActiveMqConfig;
+import com.leofee.activemq.ActiveMqConfig;
 import lombok.Data;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.junit.Test;
@@ -12,7 +12,6 @@ import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import javax.jms.*;
 import java.io.Serializable;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.LongAdder;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(classes = ActiveMqConfig.class)
