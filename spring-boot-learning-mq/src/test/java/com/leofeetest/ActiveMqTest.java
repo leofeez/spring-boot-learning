@@ -63,7 +63,12 @@ public class ActiveMqTest {
         MessageConsumer consumer = session.createConsumer(queue);
 
         while(true) {
+
+            // receive 不指定时间，则该方法会阻塞，直到接收到消息
             Message message = consumer.receive();
+
+            // receive 支持指定超时时间，当超过指定时间后，receive 会返回 null
+            // Message messageWithTimeOut = consumer.receive(10000);
             System.out.println("messageId:" + message.getJMSMessageID());
             System.out.println("deliveryMode:" + message.getJMSDeliveryMode());
 
