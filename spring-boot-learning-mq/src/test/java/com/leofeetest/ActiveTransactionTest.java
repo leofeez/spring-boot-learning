@@ -1,22 +1,12 @@
 package com.leofeetest;
 
-import com.leofee.activemq.ActiveMqConfig;
-import org.apache.activemq.ActiveMQConnectionFactory;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import javax.jms.*;
 
-@RunWith(SpringJUnit4ClassRunner.class)
-@SpringBootTest(classes = ActiveMqConfig.class)
-public class ActiveTransactionTest {
-
-    @Autowired
-    private ActiveMQConnectionFactory activeMQConnectionFactory;
-
+//@RunWith(SpringJUnit4ClassRunner.class)
+//@SpringBootTest(classes = ActiveMqConfig.class)
+public class ActiveTransactionTest extends MqBaseTest {
 
     @Test
     public void producer() throws Exception {
@@ -30,11 +20,9 @@ public class ActiveTransactionTest {
 
         MessageProducer producer = session.createProducer(queue);
 
-        for (int i = 0; i < 10; i++) {
-            TextMessage textMessage = session.createTextMessage("hello");
+        TextMessage textMessage = session.createTextMessage("hello");
 
-            producer.send(queue, textMessage);
-        }
+        producer.send(queue, textMessage);
 
         // commit 后消息才会进入消息队列
         session.commit();
@@ -55,13 +43,15 @@ public class ActiveTransactionTest {
 
         MessageConsumer consumer = session.createConsumer(queue);
 
-        while(true) {
-            TextMessage receive = (TextMessage)consumer.receive();
-            String text = receive.getText();
-            System.out.println(text);
+        TextMessage message = (TextMessage) consumer.receive();
+        String text = message.getText();
+        System.out.println("message not commit:" + text);
 
-            // 消费者提交事务
-            session.commit();
-        }
+        System.out.println("wait 5s");
+        Thread.sleep(5000);
+
+        // 消费者提交事务
+        System.out.println("message now commit:" + text);
+        session.commit();
     }
 }

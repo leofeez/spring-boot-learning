@@ -1,20 +1,10 @@
 package com.leofeetest;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
-import org.junit.Before;
 import org.junit.Test;
 
 import javax.jms.*;
 
-public class ActiveMqTest {
-
-    private ActiveMQConnectionFactory activeMQConnectionFactory;
-
-    @Before
-    public void initActiveMQConnectionFactory() {
-        // 默认的 broker url 为 tcp://localhost:61616
-        this.activeMQConnectionFactory = new ActiveMQConnectionFactory();
-    }
+public class ActiveMqTest extends MqBaseTest {
 
     @Test
     public void producer() throws Exception {
@@ -30,6 +20,8 @@ public class ActiveMqTest {
         // 创建消息的生产者
         MessageProducer producer = session.createProducer(queue);
 
+        // 默认消息的持久化是开启的
+        // 可通过设置DeliveryMode.NON_PERSISTENT
         producer.setDeliveryMode(DeliveryMode.PERSISTENT);
 
         // 发送消息到队列
@@ -71,6 +63,8 @@ public class ActiveMqTest {
             // Message messageWithTimeOut = consumer.receive(10000);
             System.out.println("messageId:" + message.getJMSMessageID());
             System.out.println("deliveryMode:" + message.getJMSDeliveryMode());
+            System.out.println("timestamp:" + message.getJMSTimestamp());
+            System.out.println("priority:" + message.getJMSPriority());
 
             if (message instanceof TextMessage) {
                 String text = ((TextMessage)message).getText();
@@ -87,5 +81,46 @@ public class ActiveMqTest {
                 System.out.println(text);
             }
         }
+    }
+
+    @Test
+    public void listener() throws Exception {
+
+        Connection connection = activeMQConnectionFactory.createConnection();
+        connection.start();
+
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Queue queue = session.createQueue("leofee_queue");
+
+        MessageConsumer consumer = session.createConsumer(queue);
+
+        consumer.setMessageListener(message -> {
+            try {
+                // receive 支持指定超时时间，当超过指定时间后，receive 会返回 null
+                // Message messageWithTimeOut = consumer.receive(10000);
+                System.out.println("messageId:" + message.getJMSMessageID());
+                System.out.println("deliveryMode:" + message.getJMSDeliveryMode());
+                System.out.println("timestamp:" + message.getJMSTimestamp());
+                System.out.println("priority:" + message.getJMSPriority());
+
+                if (message instanceof TextMessage) {
+                    String text = ((TextMessage)message).getText();
+                    System.out.println(text);
+                }
+
+                if (message instanceof MapMessage) {
+                    String text = ((MapMessage)message).getString("k");
+                    System.out.println(text);
+                }
+
+                if (message instanceof ObjectMessage) {
+                    Object text = ((ObjectMessage)message).getObject();
+                    System.out.println(text);
+                }
+            } catch (JMSException e) {
+                e.printStackTrace();
+            }
+        });
     }
 }

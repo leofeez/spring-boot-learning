@@ -73,8 +73,8 @@ public class ActiveAckTest {
         Connection connection = activeMQConnectionFactory.createConnection();
         connection.start();
 
-        // 消费者以非事务方式消费消息，指定ACK模式为手动ACK
-        // 消费者以开启事务方式消费消息，则需要手动commit，消息才会ACK
+        // 消费者以非事务方式消费消息，指定ACK模式为手动ACK，则需要显示调用message.acknowledge()
+        // 消费者以开启事务方式消费消息，手动commit，消息会自动ACK
         Session session = connection.createSession(true, Session.SESSION_TRANSACTED);
         Queue queue = session.createQueue("leofee_ack");
         MessageConsumer consumer = session.createConsumer(queue);
