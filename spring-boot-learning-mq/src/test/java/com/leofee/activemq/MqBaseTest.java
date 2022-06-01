@@ -1,4 +1,4 @@
-package com.leofeetest;
+package com.leofee.activemq;
 
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.junit.Before;

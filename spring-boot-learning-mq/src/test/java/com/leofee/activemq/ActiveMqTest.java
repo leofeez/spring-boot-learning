@@ -1,8 +1,9 @@
-package com.leofeetest;
+package com.leofee.activemq;
 
 import org.junit.Test;
 
 import javax.jms.*;
+import java.util.concurrent.CountDownLatch;
 
 public class ActiveMqTest extends MqBaseTest {
 
@@ -38,7 +39,7 @@ public class ActiveMqTest extends MqBaseTest {
         person.setName("leofee");
         person.setAge(18);
         objectMessage.setObject(person);
-        producer.send(objectMessage);
+        producer.send(objectMessage, DeliveryMode.PERSISTENT, 9, 100);
         connection.close();
     }
 
@@ -85,6 +86,7 @@ public class ActiveMqTest extends MqBaseTest {
 
     @Test
     public void listener() throws Exception {
+        CountDownLatch latch = new CountDownLatch(3);
 
         Connection connection = activeMQConnectionFactory.createConnection();
         connection.start();
@@ -120,7 +122,10 @@ public class ActiveMqTest extends MqBaseTest {
                 }
             } catch (JMSException e) {
                 e.printStackTrace();
+            } finally {
+                latch.countDown();
             }
         });
+        latch.await();
     }
 }

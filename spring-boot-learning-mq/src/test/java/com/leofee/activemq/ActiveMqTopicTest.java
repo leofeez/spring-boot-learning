@@ -1,6 +1,5 @@
-package com.leofeetest;
+package com.leofee.activemq;
 
-import com.leofee.activemq.ActiveMqConfig;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -17,7 +16,6 @@ public class ActiveMqTopicTest {
 
     @Autowired
     private ActiveMQConnectionFactory activeMQConnectionFactory;
-
 
     @Test
     public void producer() throws Exception {

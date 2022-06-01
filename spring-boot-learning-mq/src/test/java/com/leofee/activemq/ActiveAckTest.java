@@ -1,4 +1,4 @@
-package com.leofeetest;
+package com.leofee.activemq;
 
 import com.leofee.activemq.ActiveMqConfig;
 import lombok.Data;
