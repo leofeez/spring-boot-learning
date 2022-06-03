@@ -1,26 +1,7 @@
-# 消息中间件MQ
+# ActiveMQ
 
-JMS(Java Message Service): Java 消息服务，是Java为消息系统定义的一套API标准，目前常见的实现有ActiveMQ，阿里的RocketMq, RabbitMQ
-等。
+## Provider 生产消息
 
-在JMS系统中，消息是传送数据的单位，消息可以非常简单，如一个字符串，也可以很复杂， 如对象结构，消息的传递需要一个队列作为载体，即消息队列，
-消息队列提供路由并保证消息的传递，如果发送消息时，接收者处于不可用状态，此时的消息会保留在队列中，直到成功的被接收者消费。
-
-### 为什么需要MQ？
-
-- 解耦：因为消息其实是语言和平台无关的数据，而且在语义上，也不是基于函数的调用，因此消息队列也可以实现多个应用之间松耦合的交互。
-- 异步：消息队列的主要特点是异步的，主要的目的就是为了减少请求阻塞等待的消耗，所以主要的使用场景就是将那些比较耗时并且不是必须同步返回结果的操作（如磁盘IO，发邮件，短信）放入到队列中。
-- 削峰：在某些场景中，由于在短时间会产生大量的请求，如果都是采用同步阻塞的方式处理请求，那么会产生大量的请求积压，最终会降低计算机的性能，而通过消息队列
-将大量的请求处理放置在队列中，让请求的处理变得更平缓一些，让消费者有足够的时间去消费消息。
-
-### JMS中的一些角色
-
-### Broker
-消息服务器，作为server提供消息核心服务。
-
-### Queue 队列
-
-### Provider
 生产者，消息生产者是由会话创建的一个对象，用于把消息发送到一个目的地（Queue/Topic）。
 
 ```java
@@ -43,7 +24,8 @@ JMS(Java Message Service): Java 消息服务，是Java为消息系统定义的�
     producer.send(queue, textMessage);
 ```
 
-### Consumer
+## Consumer 消费消息
+
 消费者，消息消费者是由会话创建的一个对象，它用于接收发送到目的地的消息。
 ```java
     // 获取一个连接
@@ -79,39 +61,32 @@ JMS(Java Message Service): Java 消息服务，是Java为消息系统定义的�
         // 处理消息
     });
   ```
-### 消息 Message
-
-- P2P：Queue：
-    - 点对点的，消息被消费之后就会消失，所以不会出现重复消费
-    - 支持多个Consumer，但是对于一个Message而言，只会被一个Consumer消费。如果消费者没有消费，消息会一直在队列中等待消费。
-- PUB/SUB发布/订阅
-    - Topic，支持多个订阅者订阅，当消息发布到Topic中后，所有的订阅者都会受到消息
-    - 如果消息发布到Topic中，但是没有消费者，此时会丢失Topic
-    - 消费者要先进行订阅，才能接收到消息
 
 #### 消息的类型
 
-- TextMessage
-- ActiveMQObjectMessage
-- ByteMessage
+- TextMessage: 字符类型
+- ActiveMQObjectMessage: 对象结构型数据
+- MapMessage: k-v 键值对类型数据
+- ByteMessage: 支持传输流
 
 #### 消息优先级
 消息的优先级可以保证消息消费的顺序性,优先级从0~9,由低到高
 ```java
-// 在 producer 维度设置优先级
-producer.setPriority(9);
-// 在 message 维度设置优先级
-message.setJMSPriority(9);
 // 在send时指定
 producer.send(message, DeliveryMode.PERSISTENT, 9, 0);
+// 在 producer 维度设置优先级
+producer.setPriority(9);
 ```
 
 #### 消息的有效期
 
 ```java
+// 在发送消息时指定超时时间
+producer.send(message, DeliveryMode.PERSISTENT, 4, 100);
+// 指定producer发送所有消息的有效期
 producer.setTimeToLive(1000);
 ```
-消息支持设置有效期，如果超出有效期，则会进入死信队列，默认的死信队列的名称为`ActiveMQ.DLQ`（支持自定义名称），可以通过从该死信队列进行重新消费。
+消息支持设置有效期，如果超出有效期，则会进入死信队列，可以通过死信队列进行重新消费。
 
 
 ## 消息可靠性机制
@@ -223,7 +198,96 @@ session.commit();
   // 对接收到的消息进行ACK
   message.acknowledge();
   ```
-当存在多个消费者的情况下, 如果A消费者接收到某个消息没有被ack, 则其他消费者也不会收到对应的消息, 如果A消费者在ack的过程中, 连接断开,则该消息会被推送到其他消费者
+    当存在多个消费者的情况下, 如果A消费者接收到某个消息没有被ack, 则其他消费者也不会收到对应的消息, 如果A消费者在ack的过程中, 连接断开,则该消息会被推送到其他消费者
 
 #### 4. 死信队列
 某些消息如果比较重要，可以利用死信队列，防止消息丢失，然后再重新从死信队列中重新消费掉。
+
+当消息在持久化模式下，设置了有效期，当消息过期时会进入到死信队列中，如果时非持久化模式下，消息过期不会进入死信队列，这种情况会产生消息丢失的风险，也可通过配置文件设置非持久化的消息也进入死信队列中。
+
+默认的死信队列的名称为`ActiveMQ.DLQ`（支持自定义名称），支持指定队列对应的死信队列。
+
+```xml
+<policyEntry queue="leofee_queue" prioritizedMessages="true" >
+	<deadLetterStrategy> 
+		<individualDeadLetterStrategy   queuePrefix="leofee_DLQ." useQueueForQueueMessages="true" processNonPersistent="true"/> 
+	</deadLetterStrategy> 
+</policyEntry>
+```
+
+`queuePrefix="leofee_DLQ." ` 修改死信队列的名称。
+
+`useQueueForQueueMessages="true"`: 使用死信队列保存过期消息。
+
+`processNonPersistent="true"`表示非持久化的过期消息也会进入死信队列。
+
+
+
+## 消息堆积
+
+由于队列中的消息都是会存在物理内存中，如果大量消息产生堆积就会占用大量的内存空间。
+
+场景：
+
+- 由于消息过期后会进入死信队列，如果大量的消息未被及时处理全都进入到死信队列，但是死信队列的消息没有对应的消费者去处理，就会产生消息堆积。
+
+## 独占消费者
+
+默认情况下，一个消息队列中的消息默认是被多个消费者同时去消费的，也可以设置只有一个消费者去消费队列的所有消息，这样的消费者称为独占消费者。
+
+```java
+// 设置queue对应的消费者是独占消费者 consumer.exclusive=true
+Queue queue = session.createQueue("leofee_exclusive_queue?consumer.exclusive=true");
+// 此时的消费者就是独占消费者
+MessageConsumer consumer = session.createConsumer(queue);
+```
+
+
+
+## 消息延迟发送
+
+首先在配置文件中开启延迟和调度
+
+**schedulerSupport="true"**
+
+```xml
+<broker xmlns="http://activemq.apache.org/schema/core" brokerName="localhost" dataDirectory="${activemq.data}" schedulerSupport="true">
+```
+
+```java
+// 延迟
+message.setLongProperty(ScheduledMessage.AMQ_SCHEDULED_DELAY, delay);
+// 周期
+message.setLongProperty(ScheduledMessage.AMQ_SCHEDULED_PERIOD, period);
+// 重复
+message.setIntProperty(ScheduledMessage.AMQ_SCHEDULED_REPEAT, repeat);
+```
+
+
+
+## 消息过滤
+
+消费者在消费消息的时候也可以指定只消费某些消息，通过设置选择器，类似于负载均衡，保证消费者消费消息的压力是均衡的。
+
+```java
+// 生产者
+Queue queue = session.createQueue("leofee_exclusive_queue");
+MessageProducer producer = session.createProducer(queue);
+TextMessage message = session.createTextMessage();
+message.setText("leofee" + i);
+// 注意是Property，而不是value
+message.setIntProperty("age", i);
+producer.send(message);
+
+
+// 消费者
+Queue queue = session.createQueue("leofee_exclusive_queue");
+// 多个条件可以利用 and 进行连接
+String selector = "age > 18";
+MessageConsumer consumer = session.createConsumer(queue, selector);
+```
+
+需要注意的是，消息的selector过滤的规则是根据message的property进行过滤，而不是针对message的消息体。
+
+
+

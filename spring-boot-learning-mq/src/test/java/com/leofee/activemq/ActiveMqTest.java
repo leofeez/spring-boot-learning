@@ -1,5 +1,6 @@
 package com.leofee.activemq;
 
+import org.apache.activemq.ScheduledMessage;
 import org.junit.Test;
 
 import javax.jms.*;
@@ -23,7 +24,7 @@ public class ActiveMqTest extends MqBaseTest {
 
         // 默认消息的持久化是开启的
         // 可通过设置DeliveryMode.NON_PERSISTENT
-        producer.setDeliveryMode(DeliveryMode.PERSISTENT);
+        producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 
         // 发送消息到队列
         TextMessage textMessage = session.createTextMessage("hello");
@@ -39,7 +40,7 @@ public class ActiveMqTest extends MqBaseTest {
         person.setName("leofee");
         person.setAge(18);
         objectMessage.setObject(person);
-        producer.send(objectMessage, DeliveryMode.PERSISTENT, 9, 100);
+        producer.send(objectMessage, DeliveryMode.NON_PERSISTENT, 9, 1000);
         connection.close();
     }
 
@@ -127,5 +128,85 @@ public class ActiveMqTest extends MqBaseTest {
             }
         });
         latch.await();
+    }
+
+    @Test
+    public void producer2() throws Exception {
+        Connection connection = activeMQConnectionFactory.createConnection();
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Queue queue = session.createQueue("leofee_exclusive_queue");
+        MessageProducer producer = session.createProducer(queue);
+
+        for (int i = 0; i < 100; i++) {
+            TextMessage message = session.createTextMessage();
+            message.setText("leofee" + i);
+            // 注意是Property，而不是value
+            message.setIntProperty("age", i);
+            producer.send(message);
+        }
+
+        connection.close();
+    }
+
+    @Test
+    public void delay() throws Exception {
+        Connection connection = activeMQConnectionFactory.createConnection();
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Queue queue = session.createQueue("delay_queue");
+        MessageProducer producer = session.createProducer(queue);
+
+        for (int i = 0; i < 100; i++) {
+            TextMessage message = session.createTextMessage();
+            message.setLongProperty(ScheduledMessage.AMQ_SCHEDULED_DELAY, 10000 * i);
+            message.setText("leofee" + i);
+            // 注意是Property，而不是value
+            message.setIntProperty("age", i);
+            producer.send(message);
+        }
+        connection.close();
+    }
+
+    @Test
+    public void delayConsumer() throws Exception {
+        Connection connection = activeMQConnectionFactory.createConnection();
+        connection.start();
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Queue queue = session.createQueue("delay_queue");
+        MessageConsumer consumer = session.createConsumer(queue);
+
+        while (true) {
+            TextMessage message = (TextMessage)consumer.receive();
+            System.out.println(message.getText());
+        }
+    }
+
+    @Test
+    public void consumer2() throws Exception {
+        Connection connection = activeMQConnectionFactory.createConnection();
+        connection.start();
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        // 设置queue对应的消费者是独占消费者 consumer.exclusive=true
+        Queue queue = session.createQueue("leofee_exclusive_queue");
+        String selector = "age > 18";
+        MessageConsumer consumer = session.createConsumer(queue, selector);
+
+        while (true) {
+            MapMessage message = (MapMessage)consumer.receive();
+            System.out.println(message.getString("name"));
+        }
+    }
+
+    @Test
+    public void consumer3() throws Exception {
+        Connection connection = activeMQConnectionFactory.createConnection();
+        connection.start();
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Queue queue = session.createQueue("leofee_exclusive_queue");
+        MessageConsumer consumer = session.createConsumer(queue);
+
+        while (true) {
+            MapMessage message = (MapMessage)consumer.receive();
+            System.out.println(message.getString("name"));
+        }
     }
 }
