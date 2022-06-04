@@ -20,7 +20,7 @@ public class MqController {
     @GetMapping("/send")
     public String send() {
 
-        sender.send("leofee_queue", "hello");
+        sender.send("springboot_queue", "hello");
 
 
         String property = environment.getProperty("spring.activemq.password");
@@ -30,13 +30,13 @@ public class MqController {
 
     @GetMapping("/send2")
     public String send2() {
-        sender.send2("leofee_queue", "hello2");
+        sender.send2("springboot_queue", "hello2");
         return "ok";
     }
 
     @GetMapping("/send3")
     public String send3() {
-        sender.send3("leofee_topic", "hello3");
+        sender.send3("springboot_topic", "hello3");
         return "ok";
     }
 }

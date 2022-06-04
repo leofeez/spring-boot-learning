@@ -1,6 +1,7 @@
 package com.leofee.activemq;
 
 import org.apache.activemq.ScheduledMessage;
+import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.Test;
 
 import javax.jms.*;
@@ -208,5 +209,54 @@ public class ActiveMqTest extends MqBaseTest {
             MapMessage message = (MapMessage)consumer.receive();
             System.out.println(message.getString("name"));
         }
+    }
+
+    @Test
+    public void reply() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        Connection connection = activeMQConnectionFactory.createConnection();
+        connection.start();
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Queue queue = session.createQueue("leofee_queue");
+        MessageProducer producer = session.createProducer(queue);
+        TextMessage textMessage = session.createTextMessage();
+        textMessage.setText("hello");
+        textMessage.setJMSReplyTo(new ActiveMQQueue("leofee_reply"));
+        producer.send(textMessage);
+
+        MessageConsumer consumer = session.createConsumer(queue);
+        consumer.setMessageListener(message -> {
+            TextMessage receivedMessage = (TextMessage)message;
+            try {
+                System.out.println("接收到消息：" + receivedMessage.getText());
+
+                // 获取接收到消息的 Reply To
+                Destination replyTo = receivedMessage.getJMSReplyTo();
+                System.out.println("reply to：" + ((ActiveMQQueue)replyTo).getQueueName());
+
+                // 创建 Reply To 的 Producer
+                MessageProducer replyProducer = session.createProducer(replyTo);
+                TextMessage replyToMessage = session.createTextMessage();
+                replyToMessage.setText("world");
+                replyProducer.send(replyToMessage);
+
+                // 接受 Reply To 的 Consumer
+                MessageConsumer replyConsumer = session.createConsumer(replyTo);
+                replyConsumer.setMessageListener(replyMessage -> {
+                    try {
+                        System.out.println("reply message:" + ((TextMessage)replyMessage).getText());
+                    } catch (JMSException e) {
+                        e.printStackTrace();
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+
+            } catch (JMSException e) {
+                e.printStackTrace();
+            }
+        });
+        latch.await();
+        connection.close();
     }
 }

@@ -9,12 +9,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class ActiveMqReceiver {
 
-    @JmsListener(destination = "leofee_queue", containerFactory = "queue")
+    @JmsListener(destination = "springboot_queue", containerFactory = "queue")
     public void receive(String msg) {
         System.out.println("接收到消息：" + msg);
     }
 
-    @JmsListener(destination = "leofee_topic", containerFactory = "topic")
+    @JmsListener(destination = "springboot_topic", containerFactory = "topic")
     public void receiveTopic(String msg) {
         System.out.println("接收到消息Topic：" + msg);
     }
