@@ -290,4 +290,72 @@ MessageConsumer consumer = session.createConsumer(queue, selector);
 需要注意的是，消息的selector过滤的规则是根据message的property进行过滤，而不是针对message的消息体。
 
 
+## ActiveMq 整合 Spring-boot
 
+1. 添加依赖
+```xml
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-activemq</artifactId>
+        </dependency>
+
+        <!-- activemq 连接池的依赖 -->
+        <dependency>
+            <groupId>org.messaginghub</groupId>
+            <artifactId>pooled-jms</artifactId>
+        </dependency>
+```
+2. 在 `application.yml` 中配置mq
+```yml
+# active mq
+spring:
+  jms:
+    cache:
+      enabled: false
+  activemq:
+    broker-url: tcp://localhost:61616
+    user: admin
+    password: admin123
+    pool:
+      enabled: true
+      # 连接池最大连接数
+      max-connections: 10
+      # 空闲的连接过期时间，默认为30秒
+      idle-timeout: 0
+```
+3. 启动配置
+
+```java
+@EnableJms
+@Configuration
+public class ActiveMqConfig {
+
+    /**
+     * 基于 Queue 模式的
+     *
+     * @param jmsConnectionFactory 连接工厂
+     * @return
+     */
+    @Bean
+    public JmsListenerContainerFactory<?> queue(ConnectionFactory jmsConnectionFactory) {
+        DefaultJmsListenerContainerFactory queueContainer = new DefaultJmsListenerContainerFactory();
+        queueContainer.setConnectionFactory(jmsConnectionFactory);
+        return queueContainer;
+    }
+
+    /**
+     * 基于 Topic 模式的
+     *
+     * @param jmsConnectionFactory 连接工厂
+     * @return
+     */
+    @Bean
+    public JmsListenerContainerFactory<?> topic(ConnectionFactory jmsConnectionFactory) {
+        DefaultJmsListenerContainerFactory queueContainer = new DefaultJmsListenerContainerFactory();
+        queueContainer.setConnectionFactory(jmsConnectionFactory);
+        // 自定义同时开启pub_sub和点对点模式，因为activeMQ 默认只支持一种模式
+        queueContainer.setPubSubDomain(true);
+        return queueContainer;
+    }
+}
+```

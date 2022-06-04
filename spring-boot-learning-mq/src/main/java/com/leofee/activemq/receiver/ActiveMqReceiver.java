@@ -13,4 +13,9 @@ public class ActiveMqReceiver {
     public void receive(String msg) {
         System.out.println("接收到消息：" + msg);
     }
+
+    @JmsListener(destination = "leofee_topic", containerFactory = "topic")
+    public void receiveTopic(String msg) {
+        System.out.println("接收到消息Topic：" + msg);
+    }
 }

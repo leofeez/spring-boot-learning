@@ -27,4 +27,16 @@ public class MqController {
 
         return "ok";
     }
+
+    @GetMapping("/send2")
+    public String send2() {
+        sender.send2("leofee_queue", "hello2");
+        return "ok";
+    }
+
+    @GetMapping("/send3")
+    public String send3() {
+        sender.send3("leofee_topic", "hello3");
+        return "ok";
+    }
 }

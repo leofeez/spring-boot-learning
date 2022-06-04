@@ -12,7 +12,7 @@ import java.util.Properties;
 
 /**
  * spring boot 中 {@link org.springframework.context.annotation.PropertySource @PropertySource}
- * 默认不支持对 yml文件的解析，所以必须指定解析的factory
+ * 默认不支持对 yml文件的解析，所以必须指定解析的factory，如下：
  *
  * <pre>
  * {@code @PropertySource(value = "classpath:mq.yml", factory = YmlPropertySourceFactory.class)}
