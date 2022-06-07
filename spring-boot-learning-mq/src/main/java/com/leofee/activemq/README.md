@@ -89,8 +89,7 @@ producer.setTimeToLive(1000);
 ```
 消息支持设置有效期，如果超出有效期，则会进入死信队列，可以通过死信队列进行重新消费。
 
-
-## 消息可靠性机制
+### 消息可靠性机制
 
 #### 1. 消息持久化
 
@@ -224,7 +223,7 @@ session.commit();
 
 
 
-## 消息堆积
+### 消息堆积
 
 由于队列中的消息都是会存在物理内存中，如果大量消息产生堆积就会占用大量的内存空间。
 
@@ -232,7 +231,7 @@ session.commit();
 
 - 由于消息过期后会进入死信队列，如果大量的消息未被及时处理全都进入到死信队列，但是死信队列的消息没有对应的消费者去处理，就会产生消息堆积。
 
-## 独占消费者
+### 独占消费者
 
 默认情况下，一个消息队列中的消息默认是被多个消费者同时去消费的，也可以设置只有一个消费者去消费队列的所有消息，这样的消费者称为独占消费者。
 
@@ -245,7 +244,7 @@ MessageConsumer consumer = session.createConsumer(queue);
 
 
 
-## 消息延迟发送
+### 消息延迟发送
 
 首先在配置文件中开启延迟和调度
 
@@ -266,7 +265,7 @@ message.setIntProperty(ScheduledMessage.AMQ_SCHEDULED_REPEAT, repeat);
 
 
 
-## 消息过滤
+### 消息过滤
 
 消费者在消费消息的时候也可以指定只消费某些消息，通过设置选择器，类似于负载均衡，保证消费者消费消息的压力是均衡的。
 
@@ -292,7 +291,7 @@ MessageConsumer consumer = session.createConsumer(queue, selector);
 
 
 
-## 消息反馈 Reply To
+### 消息反馈 Reply To
 
 消息反馈指的是生产在发送消息时，指定 message 的 replyTo 目的地，当消费者消费时，可以通过 message 获取对应的 replyTo
 
@@ -311,7 +310,7 @@ public void reply() throws Exception {
     textMessage.setJMSReplyTo(new ActiveMQQueue("leofee_reply"));
     producer.send(textMessage);
 	
-    // x
+    // 消息接收
     MessageConsumer consumer = session.createConsumer(queue);
     consumer.setMessageListener(message -> {
         TextMessage receivedMessage = (TextMessage)message;
@@ -420,14 +419,64 @@ public class ActiveMqConfig {
 }
 ```
 
-## 如何防止消息丢失
+## Linux 安装 Active MQ
+
+1. 安装jdk，并配置好环境变量
+2. [官网下载](https://activemq.apache.org/components/classic/download/) ActiveMQ 的tar.gz 
+3. 解压 `tar -zxvf 压缩包名称`
+4. 切换到activemq 的bin目录下，比如我放在了 `/usr/local` 目录下，
+   `cd /usr/local/apache-activemq-5.16.4/bin/`
+   在 `activemq/bin`下的`env`配置中指定java的安装路径
+5. 启动 activemq 服务 `./activemq start`
+   
+    ![img.png](activemq-start.png)
+
+## 访问Linux上的ActiveMq服务
+本人使用的是VMware开启的Cent OS 7 的虚拟机为例。
+
+1. 查看防火墙是否开启 `systemctl status firewalld`
+
+    ![img.png](systemctl-status.png)
+
+    running 代表是开启的
+
+2. 由于防火墙是开启的，首先需要开放activemq默认的8161端口，如果已经关闭了防火墙就可以忽略这一步
+   ```shell
+      # 开放8161端口，--permanent 代表永久，下次服务器重启也会有效
+      firewall-cmd --zone=public --add-port=8161/tcp --permanent
+      # 重载防火墙设置
+      firewall-cmd --reload
+      # 查询已经开放的端口
+      firewall-cmd --list-ports
+   ```
+
+3. 防火墙设置好了之后，必须得开启activemq的远程访问
+
+   切换到activemq的conf目录下，打开jetty.xml，找到下图中配置host
+
+   ```shell
+    cd /usr/local/apache-activemq-5.16.4/conf/
+    vi jetty.xml
+   ```
+    ![img.png](jetty-host.png)
+    
+    默认为`127.0.0.1`表示本地访问，所以需要将host修改为 `0.0.0.0`开启远程访问。
+   
+4. 重启ActiveMQ `./activemq restart`，此时可以通过浏览器使用IP直接访问虚拟机Linux上的ActiveMQ服务
+
+   
 
 
+## 问题 Q & A
 
-## 如何防止消息的重复消费
+1. 如何防止消息丢失
 
-- 接口保证幂等性
-- 
+ 	2. 如何防止消息的重复消费
+     - 接口保证幂等性
 
-## 如何保证消费顺序
+3. 如何保证消费顺序
+
+ 4. 如果发送了100条消息到broker中，如果consumer在消费第50条消息时，mq发生了宕机，mq重启后是否可正确的从弟51条开始消费？
+
+    A: 如果配置了持久化策略，则重启后消息不会丢失，如果消息没有设置优先级，则还可以从原来的第51条开始消费，如果不是AutoAcknowledge，则不会从第51条，而是从第50条
 

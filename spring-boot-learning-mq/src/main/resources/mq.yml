@@ -4,7 +4,7 @@ spring:
     cache:
       enabled: false
   activemq:
-    broker-url: tcp://localhost:61616
+    broker-url: tcp://192.168.248.131:61616
     user: admin
     password: admin123
     pool:
