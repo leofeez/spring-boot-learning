@@ -465,7 +465,33 @@ public class ActiveMqConfig {
 4. 重启ActiveMQ `./activemq restart`，此时可以通过浏览器使用IP直接访问虚拟机Linux上的ActiveMQ服务
 
    
+## ActiveMQ 支持的连接协议
 
+1. TCP：这是ActiveMQ默认的连接协议，并且是基于BIO模型。
+2. NIO：NIO是基于TCP协议，但是是非阻塞，所以使用该协议会提升ActiveMQ的性能表现。
+3. VM
+...
+
+要从 TCP 切换到 NIO，只需更改 URI 的方案部分。这是在代理的 XML 配置文件中定义的示例。
+
+ActiveMQ服务端配置：
+```xml
+<broker>
+  ...
+  <transportConnectors>
+    <transportConnector name="nio" uri="nio://0.0.0.0:61616"/>  
+  </transportConnectors>
+  ...
+</broker>
+```
+客户端基于NIO连接需要在broker的url使用nio连接协议：
+```java
+ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
+				"admin",
+				"admin",
+				"nio://localhost:61617"
+				);
+```
 
 ## 问题 Q & A
 
