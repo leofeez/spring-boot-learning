@@ -63,6 +63,18 @@
     });
   ```
 
+## Browser
+Browser 在 ActiveMQ 中的角色是用于查看队列中的消息，类似于Java集合中的队列的`peek`，只是用于查看队列中的消息，而不消费队列中的消息，
+区别是Browser可以遍历队列中的所有消息，而Java 的 Queue#peek 只是查看队列尾部的消息。
+
+```java
+    QueueBrowser browser = session.createBrowser(queue);
+        Enumeration enumeration = browser.getEnumeration();
+        while (enumeration.hasMoreElements()) {
+            System.out.println(enumeration.nextElement());
+    }
+```
+
 #### 消息的类型
 
 - TextMessage: 字符类型
@@ -293,7 +305,8 @@ MessageConsumer consumer = session.createConsumer(queue, selector);
 
 ### 消息反馈 Reply To
 
-消息反馈指的是生产在发送消息时，指定 message 的 replyTo 目的地，当消费者消费时，可以通过 message 获取对应的 replyTo
+消息反馈指的是生产在发送消息时，指定 message 的 replyTo 目的地，当消费者消费时，可以通过 message 获取对应的 replyTo，这里的replyTo
+也是一个Destination
 
 ```java
 @Test
@@ -347,6 +360,20 @@ public void reply() throws Exception {
     connection.close();
 }
 ```
+
+### JMSCorrelationID 消息会话ID
+在上面所说的 ReplyTo 机制可以实现，消费者在获取到消息后通过 ReplyTo 队列 通知生产者当前消息已经消费了，但是当有很多个消息的时候，
+生产者是无法知道某一个消息的具体情况的，所以ActiveMQ还提供了一个类似于会话ID的机制，即JMDCorrelationID，通过JMSCorrelationID
+能够让生产者监测到每一条具体消息的消费情况，从而做到更细粒度的消息监控。
+
+
+### Requestor 同步消息
+
+
+## PrefetchSize 决定消息的 推还是拉
+
+ActiveMQ在consumer端支持消息的缓冲池，缓冲池的大小就是通过prepfetchSize设定，该设置也决定了broker中队列消息在consumer上线时是
+主动推送还是由consumer主动拉取消息。
 
 
 ## ActiveMq 整合 Spring-boot

@@ -5,6 +5,7 @@ import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.Test;
 
 import javax.jms.*;
+import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 
 public class ActiveMqTest extends MqBaseTest {
@@ -258,5 +259,27 @@ public class ActiveMqTest extends MqBaseTest {
         });
         latch.await();
         connection.close();
+    }
+
+    @Test
+    public void browser() throws Exception {
+        Connection connection = this.activeMQConnectionFactory.createConnection();
+        connection.start();
+        Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Queue queue = session.createQueue("browser_queue");
+        MessageProducer producer = session.createProducer(queue);
+
+        for (int i = 0; i < 10; i++) {
+            TextMessage textMessage = session.createTextMessage();
+            textMessage.setText("hello " + i);
+            producer.send(textMessage);
+        }
+
+        QueueBrowser browser = session.createBrowser(queue);
+
+        for (Enumeration enumeration = browser.getEnumeration(); enumeration.hasMoreElements();) {
+            System.out.println(enumeration.nextElement());
+        }
     }
 }
