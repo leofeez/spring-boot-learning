@@ -301,8 +301,6 @@ MessageConsumer consumer = session.createConsumer(queue, selector);
 
 需要注意的是，消息的selector过滤的规则是根据message的property进行过滤，而不是针对message的消息体。
 
-
-
 ### 消息反馈 Reply To
 
 消息反馈指的是生产在发送消息时，指定 message 的 replyTo 目的地，当消费者消费时，可以通过 message 获取对应的 replyTo，这里的replyTo
@@ -361,14 +359,80 @@ public void reply() throws Exception {
 }
 ```
 
+### Requestor 同步消息
+
+在 JMS 框架中，还提供一个同步阻塞式的消息发送，在ActiveMQ中，消息的发送都是基于异步的，这也是消息队列的主要特性，但是尽管主次，
+在 JMS 中还是提供了这种基于同步阻塞的方式进行消息的发送，虽然在本质上违背了mq的异步通讯原则，但是mq还是能够提供应用解耦、异构系统的特性。
+
+使用QueueRequestor发送消息后，会等待接收端的回复，如果收不到回复就会造成死等现象!而且该方法没有设置超时等待的功能：
+
+```java
+    // requestor 发送消息
+    public void requestor() throws Exception {
+        QueueConnection connection = this.activeMQConnectionFactory.createQueueConnection();
+        connection.start();
+        QueueSession session = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Queue queue = session.createQueue("requestor_queue");
+
+        QueueRequestor requestor = new QueueRequestor(session, queue);
+
+        TextMessage message = session.createTextMessage();
+        message.setText("hello requestor");
+
+        System.out.println("requestor 开始发送消息");
+        Message res = requestor.request(message);
+        System.out.println("requestor 结束发送消息，reply = " + res);
+
+        connection.close();
+    }
+```
+```java
+    // 消费端消费消息
+    public void requestorConsumer() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        QueueConnection connection = this.activeMQConnectionFactory.createQueueConnection();
+        connection.start();
+        QueueSession session = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Queue queue = session.createQueue("requestor_queue");
+        MessageConsumer consumer = session.createConsumer(queue);
+        consumer.setMessageListener(message -> {
+            try {
+                Destination replyTo = message.getJMSReplyTo();
+                TextMessage textMessage = session.createTextMessage();
+                textMessage.setText("你好 requestor");
+                MessageProducer producer = session.createProducer(replyTo);
+                producer.send(textMessage);
+                connection.close();
+                latch.countDown();
+            } catch (JMSException e) {
+                e.printStackTrace();
+            }
+        });
+        latch.await();
+    }
+```
+
+底层的实现其实是基于ReplyTo 和 Receiver#receive() 方法阻塞实现，原理是 Requestor 发送消息时会默认设置一个 ReplyTo，并且创建 receiver 去
+阻塞接受该Reply队列的消息，当真正的消费端消费消息后，需要同时向replyTo的队列中发送一条消息。
+
+QueueRequestor#request() 方法源码如下：
+```java
+    public Message request(Message message) throws JMSException {
+        // 设置 Reply to
+        message.setJMSReplyTo(this.tempQueue);
+        // 发送消息
+        this.sender.send(message);
+        // 同步阻塞等待 Reply To 队列的消息
+        return this.receiver.receive();
+    }
+```
+
 ### JMSCorrelationID 消息会话ID
 在上面所说的 ReplyTo 机制可以实现，消费者在获取到消息后通过 ReplyTo 队列 通知生产者当前消息已经消费了，但是当有很多个消息的时候，
 生产者是无法知道某一个消息的具体情况的，所以ActiveMQ还提供了一个类似于会话ID的机制，即JMDCorrelationID，通过JMSCorrelationID
 能够让生产者监测到每一条具体消息的消费情况，从而做到更细粒度的消息监控。
-
-
-### Requestor 同步消息
-
 
 ## PrefetchSize 决定消息的 推还是拉
 

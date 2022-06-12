@@ -1,5 +1,7 @@
 package com.leofee.activemq;
 
+import org.apache.activemq.ActiveMQConnection;
+import org.apache.activemq.ActiveMQSession;
 import org.apache.activemq.ScheduledMessage;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.Test;
@@ -281,5 +283,50 @@ public class ActiveMqTest extends MqBaseTest {
         for (Enumeration enumeration = browser.getEnumeration(); enumeration.hasMoreElements();) {
             System.out.println(enumeration.nextElement());
         }
+    }
+
+    @Test
+    public void requestor() throws Exception {
+        QueueConnection connection = this.activeMQConnectionFactory.createQueueConnection();
+        connection.start();
+        QueueSession session = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Queue queue = session.createQueue("requestor_queue");
+
+        QueueRequestor requestor = new QueueRequestor(session, queue);
+
+        TextMessage message = session.createTextMessage();
+        message.setText("hello requestor");
+
+        System.out.println("requestor 开始发送消息");
+        Message res = requestor.request(message);
+        System.out.println("requestor 结束发送消息，reply = " + res);
+
+        connection.close();
+    }
+
+    @Test
+    public void requestorConsumer() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        QueueConnection connection = this.activeMQConnectionFactory.createQueueConnection();
+        connection.start();
+        QueueSession session = connection.createQueueSession(false, Session.AUTO_ACKNOWLEDGE);
+
+        Queue queue = session.createQueue("requestor_queue");
+        MessageConsumer consumer = session.createConsumer(queue);
+        consumer.setMessageListener(message -> {
+            try {
+                Destination replyTo = message.getJMSReplyTo();
+                TextMessage textMessage = session.createTextMessage();
+                textMessage.setText("你好 requestor");
+                MessageProducer producer = session.createProducer(replyTo);
+                producer.send(textMessage);
+                connection.close();
+                latch.countDown();
+            } catch (JMSException e) {
+                e.printStackTrace();
+            }
+        });
+        latch.await();
     }
 }
