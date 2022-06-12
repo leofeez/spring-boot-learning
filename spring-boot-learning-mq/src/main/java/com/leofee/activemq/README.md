@@ -191,11 +191,11 @@ session.commit();
   session.commit();
   ```
 
-- 消费者在非事务的模式下，消息的确认取决于设置的应答模式(ackknowlegement mode)，主要有以下几种：
+- 消费者在非事务的模式下，消息的确认取决于设置的应答模式(Acknowledgement mode)，主要有以下几种：
     * `Session.AUTO_ACKNOWLEDGE`：当consumer.receive()方法返回时，或者从MessageListener.onMessage方法成功返回时，会自动确认消费者已经收到消息。
     * `Session.CLIENT_ACKNOWLEDGE`：客户端通过`Message#acknowledge`方法手动确认，如果消费者接收到消息没有显示调用acknowledge，
       消息就一直会存在队列中，还有一点需要注意的是，如果客户端一次性接受到10个消息， 但是在处理第5个的时候触发了acknowledge，
-      这时候，会将所有的10个消息都进行确认，所以ackknowledge是基于一个session层面的。
+      这时候，会将所有的10个消息都进行确认，所以acknowledge是基于一个session层面的。
     * `Session.DUPS_OK_ACKNOWLEDGE`：Session不必确保对传送消息的签收，这个模式可能会引起消息的重复，但是降低了Session的开销，所以只有客户端能容忍重复的消息，才可使用。
   ```java
   // 消费者未开启事务，设置了CLIENT_ACKNOWLEDGE 手工进行ack
@@ -210,7 +210,13 @@ session.commit();
   // 对接收到的消息进行ACK
   message.acknowledge();
   ```
-    当存在多个消费者的情况下, 如果A消费者接收到某个消息没有被ack, 则其他消费者也不会收到对应的消息, 如果A消费者在ack的过程中, 连接断开,则该消息会被推送到其他消费者
+    当存在多个消费者的情况下, 如果A消费者接收到某个消息没有被ack, 则其他消费者也不会收到对应的消息, 如果A消费者在ack的过程中, 连接断开,则该消息会被推送到其他消费者，从而防止消息的丢失。
+
+批量确认消息
+在ActiveMQ中默认是支持批量的去确认消息，这样可以提升MQ的性能，当然也可以手动进行关闭：
+```java
+new ActiveMQConnectionFactory("tcp://locahost:61616?jms.optimizeAcknowledge=false");
+```
 
 #### 4. 死信队列
 某些消息如果比较重要，可以利用死信队列，防止消息丢失，然后再重新从死信队列中重新消费掉。
@@ -434,11 +440,124 @@ QueueRequestor#request() 方法源码如下：
 生产者是无法知道某一个消息的具体情况的，所以ActiveMQ还提供了一个类似于会话ID的机制，即JMDCorrelationID，通过JMSCorrelationID
 能够让生产者监测到每一条具体消息的消费情况，从而做到更细粒度的消息监控。
 
-## PrefetchSize 决定消息的 推还是拉
+## PrefetchSize消费缓冲与消息积压
+在一般场景下，消费者端，一般来说消费的越快越好，broker的积压越小越好。
+但是考虑到事务性和客户端确认的情况，如果一个消费者一次获取到了很多消息却都不确认，这会造成事务上下文变大，broker端这种“半消费状态”的数据变多，
+所以ActiveMQ有一个prefetchSize参数来控制未确认情况下，最多可以预获取多少条记录，该设定类似于缓冲池，缓冲池的大小就是通过prepfetchSize设定，
+该设置也决定了broker中队列消息在consumer上线时是主动推送还是由consumer主动拉取消息。
 
-ActiveMQ在consumer端支持消息的缓冲池，缓冲池的大小就是通过prepfetchSize设定，该设置也决定了broker中队列消息在consumer上线时是
-主动推送还是由consumer主动拉取消息。
+**Pre-fetch默认值**
 
+| consumer type | default value |
+| ------------- | ------------- |
+| queue         | 1000          |
+| queue browser | 500           |
+| topic         | 32766         |
+| durable topic | 1000          |
+
+
+
+### 可以通过三种方式设置prefetchSize
+
+1. **创建连接时按照ConnectionFactory整体设置**
+
+```java
+	ActiveMQConnectionFactory connectio nFactory = new ActiveMQConnectionFactory(
+				"admin",
+				"admin",
+				"tcp://localhost:5671?jms.prefetchPolicy.all=50"
+				);
+```
+
+2. **创建连接时对topic和queue单独设置**
+
+```java
+    ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
+				"admin",
+				"admin",
+				"tcp://localhost:5671?jms.prefetchPolicy.queuePrefetch=1&jms.prefetchPolicy.topicPrefetch=1"
+				);
+```
+
+3. **针对某一个指定的destination单独设置**
+
+```java
+    Destination topic = session.createTopic("user?consumer.prefetchSize=10");
+```
+
+**注意：对destination设置prefetchsize后会覆盖连接时的设置值**
+
+#### 消息到底是推还是拉?
+
+发送消息时是推向broker
+
+获取消息时：
+
+- 默认是一条一条的推
+- 当customer的prefetchSize满的时候停止推消息
+- 当customer的prefetchSize ==0时 拉取消息
+
+以上的规则可以在源码`org.apache.activemq.broker.region.Queue#doActualDispatch` 方法中，在broker中准备分发消息的时候会根据
+prefetchSize 进行判断`consumer.isFull()` 是否已经满了：
+```java
+            for (Subscription s : consumers) {
+                if (s instanceof QueueBrowserSubscription) {
+                    continue;
+                }
+                if (!fullConsumers.contains(s)) {
+                    // 判断消费者的缓冲池是否已满
+                    if (!s.isFull()) {
+                        if (dispatchSelector.canSelect(s, node) && assignMessageGroup(s, (QueueMessageReference)node) && !((QueueMessageReference) node).isAcked() ) {
+                            // Dispatch it.
+                            s.add(node);
+                            LOG.trace("assigned {} to consumer {}", node.getMessageId(), s.getConsumerInfo().getConsumerId());
+                            iterator.remove();
+                            target = s;
+                            break;
+                        }
+                    }
+                    // 如果已经满了则放入到已满消费者的集合中
+                    else {
+                        // no further dispatch of list to a full consumer to
+                        // avoid out of order message receipt
+                        fullConsumers.add(s);
+                        LOG.trace("Subscription full {}", s);
+                    }
+                }
+            }
+```
+
+在消息端也会进行判断，是否需要拉取消息：
+```java
+    @Override
+    public Message receive() throws JMSException {
+        checkClosed();
+        checkMessageListener();
+        
+        // 发送拉取指令
+        sendPullCommand(0);
+        MessageDispatch md = dequeue(-1);
+        if (md == null) {
+            return null;
+        }
+
+        beforeMessageIsConsumed(md);
+        afterMessageIsConsumed(md, false);
+
+        return createActiveMQMessage(md);
+    }
+
+    protected void sendPullCommand(long timeout) throws JMSException {
+        clearDeliveredList();
+        // 根据 prefetchSize 进行判断
+        if (info.getCurrentPrefetchSize() == 0 && unconsumedMessages.isEmpty()) {
+            MessagePull messagePull = new MessagePull();
+            messagePull.configure(info);
+            messagePull.setTimeout(timeout);
+            session.asyncSendPacket(messagePull);
+        }
+    }
+```
 
 ## ActiveMq 整合 Spring-boot
 

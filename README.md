@@ -27,9 +27,10 @@
    - spring-boot 集成redisson。
 
 ## spring-boot zookeeper
-- [spring-boot-redisson](./spring-boot-learning-zookeeper)
+- [spring-boot-zookeeper](./spring-boot-learning-zookeeper)
   - spring-boot 集成 zookeeper。
 
 ## spring-boot mq
 - [spring-boot-mq](./spring-boot-learning-mq)
-  - spring-boot 集成redisson。
+  - spring-boot 集成 ActiveMQ。
+  - spring-boot 继承 RocketMQ。
