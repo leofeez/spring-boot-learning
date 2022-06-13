@@ -65,7 +65,7 @@
 
 ## Browser
 Browser 在 ActiveMQ 中的角色是用于查看队列中的消息，类似于Java集合中的队列的`peek`，只是用于查看队列中的消息，而不消费队列中的消息，
-区别是Browser可以遍历队列中的所有消息，而Java 的 Queue#peek 只是查看队列尾部的消息。
+区别是Browser可以遍历队列中的所有消息，而Java 的 `Queue#peek()` 只是查看队列尾部的消息。
 
 ```java
     QueueBrowser browser = session.createBrowser(queue);
@@ -74,6 +74,8 @@ Browser 在 ActiveMQ 中的角色是用于查看队列中的消息，类似于Ja
             System.out.println(enumeration.nextElement());
     }
 ```
+
+## Message
 
 #### 消息的类型
 
@@ -440,6 +442,8 @@ QueueRequestor#request() 方法源码如下：
 生产者是无法知道某一个消息的具体情况的，所以ActiveMQ还提供了一个类似于会话ID的机制，即JMDCorrelationID，通过JMSCorrelationID
 能够让生产者监测到每一条具体消息的消费情况，从而做到更细粒度的消息监控。
 
+#### 
+
 ## PrefetchSize消费缓冲与消息积压
 在一般场景下，消费者端，一般来说消费的越快越好，broker的积压越小越好。
 但是考虑到事务性和客户端确认的情况，如果一个消费者一次获取到了很多消息却都不确认，这会造成事务上下文变大，broker端这种“半消费状态”的数据变多，
@@ -487,7 +491,7 @@ QueueRequestor#request() 方法源码如下：
 
 **注意：对destination设置prefetchsize后会覆盖连接时的设置值**
 
-#### 消息到底是推还是拉?
+### 消息到底是推还是拉?
 
 发送消息时是推向broker
 
@@ -549,7 +553,7 @@ prefetchSize 进行判断`consumer.isFull()` 是否已经满了：
 
     protected void sendPullCommand(long timeout) throws JMSException {
         clearDeliveredList();
-        // 根据 prefetchSize 进行判断
+        // 根据 prefetchSize 进行判断，如果prefetchSize == 0 并且 未消费的消息为0
         if (info.getCurrentPrefetchSize() == 0 && unconsumedMessages.isEmpty()) {
             MessagePull messagePull = new MessagePull();
             messagePull.configure(info);
@@ -558,6 +562,14 @@ prefetchSize 进行判断`consumer.isFull()` 是否已经满了：
         }
     }
 ```
+
+### prefetchSize 导致消费倾斜
+
+当MQ中的消息生产速度并不饱和，这时候当存在多个消费者负载均衡时，如果某一个消费者的`prefetchSize`设置的过大，则会导致消费倾斜的问题出现，因为设置prefetchSize后消费者会主动拉取消息，假设消费者在处理消息时有一些比较耗时的操作，就会导致消息的消费速度变慢，影响效率。
+
+解决办法：将`prefetchSize = 1`，这样就可以避免消费者一次性拉取多条消息，从而产生消费倾斜的问题。
+
+
 
 ## ActiveMq 整合 Spring-boot
 
@@ -669,7 +681,7 @@ public class ActiveMqConfig {
     vi jetty.xml
    ```
     ![img.png](jetty-host.png)
-    
+   
     默认为`127.0.0.1`表示本地访问，所以需要将host修改为 `0.0.0.0`开启远程访问。
    
 4. 重启ActiveMQ `./activemq restart`，此时可以通过浏览器使用IP直接访问虚拟机Linux上的ActiveMQ服务
@@ -702,6 +714,22 @@ ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
 				"nio://localhost:61617"
 				);
 ```
+
+## ActiveMQ 高可用
+
+### Master / Slaver 主备模式
+以下是可用的不同类型的主/从配置：
+
+|主从型          |要求                       |优点       |缺点           |
+|-------------- |---------------------------|-----------|--------       |
+|共享文件系统    |	共享文件系统，例如 SAN   |	故障转移，自动恢复	|需要共享文件系统 |
+|JDBC主从       |	共享数据库              |	故障转移，自动恢复	|需要共享数据库。也比较慢，因为它不能使用高性能|
+
+#### Shared File System 共享文件
+
+#### JDBC Master Slaver
+
+> 官方文档 https://activemq.apache.org/masterslave
 
 ## 问题 Q & A
 

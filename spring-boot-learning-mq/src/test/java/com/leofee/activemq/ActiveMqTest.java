@@ -3,6 +3,7 @@ package com.leofee.activemq;
 import org.apache.activemq.ActiveMQConnection;
 import org.apache.activemq.ActiveMQSession;
 import org.apache.activemq.ScheduledMessage;
+import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.Test;
 
@@ -67,6 +68,9 @@ public class ActiveMqTest extends MqBaseTest {
 
             // receive 支持指定超时时间，当超过指定时间后，receive 会返回 null
             // Message messageWithTimeOut = consumer.receive(10000);
+            System.out.println("time:" + message.getJMSTimestamp());
+            System.out.println("brokerInTime:" + ((ActiveMQMessage)message).getBrokerInTime());
+            System.out.println("brokerOutTime:" + ((ActiveMQMessage)message).getBrokerOutTime());
             System.out.println("messageId:" + message.getJMSMessageID());
             System.out.println("deliveryMode:" + message.getJMSDeliveryMode());
             System.out.println("timestamp:" + message.getJMSTimestamp());
