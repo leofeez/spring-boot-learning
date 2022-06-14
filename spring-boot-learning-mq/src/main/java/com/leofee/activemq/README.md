@@ -743,11 +743,46 @@ master节点，未成功获取锁的broker为slaver，这时候的slaver会处�
 2. 修改对应的`transportConnector`对应的broker端口号
 
 3. 在客户端连接broker的url设置为`failover:(tcp://broker1:61616,tcp://broker2:61617,tcp://broker3:61618)`
+```java
+ ActiveMQConnectionFactory connectionFactory
+        = new ActiveMQConnectionFactory("admin", "admin123", "failover:(tcp://localhost:61616,tcp://localhost:61617)");
+```
 
 当master节点下线后，客户端也会自动切换到对应的新master节点上，从而实现主备模式的高可用。
+
+> 官方文档 https://activemq.apache.org/shared-file-system-master-slave
 #### JDBC Master Slaver
 
 > 官方文档 https://activemq.apache.org/masterslave
+
+
+#### Failover transport 可配置选项
+在broker url 为 failover 下，还可以在broker url上设置一些额外的参数配置来实现某些效果，如
+`failover:(tcp://localhost:61616,tcp://localhost:61617)?randomize=true`，`randomize=true`代表的含义是使用随机连接，
+以达到负载均衡的目的，默认true，除了该参数，还有很多其他参数配置如下：
+
+#### Transport Options
+
+| Option Name                   | Default Value | Description                                                  |
+| ----------------------------- | ------------- | ------------------------------------------------------------ |
+| `backup`                      | `false`       | Initialize and hold a second transport connection - to enable fast failover. |
+| `initialReconnectDelay`       | `10`          | The delay (in ms) before the *first* reconnect attempt.      |
+| `maxCacheSize`                | `131072`      | Size in bytes for the cache of tracked messages. Applicable only if `trackMessages` is `true`. |
+| `maxReconnectAttempts`        | `-1 | 0`      | **From ActiveMQ 5.6**: default is `-1`, retry forever. `0` means disables re-connection, e.g: just try to connect once. **Before ActiveMQ 5.6**: default is `0`, retry forever. **All ActiveMQ versions**: a value `>0` denotes the maximum number of reconnect attempts before an error is sent back to the client. |
+| `maxReconnectDelay`           | `30000`       | The maximum delay (in ms) between the *second and subsequent* reconnect attempts. |
+| `nested.*`                    | `null`        | **From ActiveMQ 5.9:** common URI options that will be applied to each URI in the list**.** |
+| `randomize`                   | `true`        | If `true`, choose a URI at random from the list to use for reconnect. |
+| `reconnectDelayExponent`      | `2.0`         | The exponent used during exponential back-off attempts.      |
+| `reconnectSupported`          | `true`        | Determines whether the client should respond to broker `ConnectionControl` events with a reconnect (see: `rebalanceClusterClients`). |
+| `startupMaxReconnectAttempts` | `-1`          | A value of `-1` denotes that the number of connection attempts at startup should be unlimited. A value of `>=0` denotes the number of reconnect attempts at startup that will be made after which an error is sent back to the client when the client makes a subsequent reconnect attempt. **Note**: once successfully connected the `maxReconnectAttempts` option prevails. |
+| `timeout`                     | `-1`          | **From ActiveMQ 5.3**: set the timeout on send operations (in ms) without interruption of re-connection process. |
+| `trackMessages`               | `false`       | Keep a cache of in-flight messages that will flushed to a broker on reconnect. |
+| `updateURIsSupported`         | `true`        | **From** **ActiveMQ 5.4:** determines whether the client should accept updates from the broker to its list of known URIs. |
+| `updateURIsURL`               | `null`        | **From ActiveMQ 5.4:** a URL (or path to a local file) to a text file containing a comma separated list of URIs to use for reconnect in the case of failure. |
+| `useExponentialBackOff`       | `true`        | If `true` an exponential back-off is used between reconnect attempts. |
+| `warnAfterReconnectAttempts`  | `10`          | **From ActiveMQ 5.10:** a value `>0` specifies the number of reconnect attempts before a warning is logged. A logged warning indicates that there is no current connection but re-connection is being attempted. A value of `<=0` disables the logging of warnings about reconnect attempts. |
+
+> https://activemq.apache.org/failover-transport-reference.html
 
 ## 问题 Q & A
 
