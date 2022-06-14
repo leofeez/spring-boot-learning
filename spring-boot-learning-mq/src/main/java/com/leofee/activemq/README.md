@@ -718,7 +718,11 @@ ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
 ## ActiveMQ 高可用
 
 ### Master / Slaver 主备模式
-以下是可用的不同类型的主/从配置：
+对于ActiveMQ在主备模式下，启动多个broker，共享同一数据源，多个broker同时启动时，会去竞争同一把互斥锁，成功获取锁的broker节点为
+master节点，未成功获取锁的broker为slaver，这时候的slaver会处于等待互斥锁的状态，当master节点下线后，其他的slaver会自动争夺互斥锁，从而
+晋升为master节点。
+
+以下是可用的不同类型的主/从模式：
 
 |主从型          |要求                       |优点       |缺点           |
 |-------------- |---------------------------|-----------|--------       |
@@ -726,7 +730,21 @@ ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
 |JDBC主从       |	共享数据库              |	故障转移，自动恢复	|需要共享数据库。也比较慢，因为它不能使用高性能|
 
 #### Shared File System 共享文件
+配置基于共享文件类型的主备模式
 
+1. 修改`ActiveMQ/conf/activemq.xml`中对应的 persistenceAdapter 持久化的指定的目录，保证多个broker节点
+共享同一持久化目录。
+```xml
+    <persistenceAdapter>
+        <kahaDB directory="${activemq.data}/kahadb"/>
+    </persistenceAdapter>
+```
+
+2. 修改对应的`transportConnector`对应的broker端口号
+
+3. 在客户端连接broker的url设置为`failover:(tcp://broker1:61616,tcp://broker2:61617,tcp://broker3:61618)`
+
+当master节点下线后，客户端也会自动切换到对应的新master节点上，从而实现主备模式的高可用。
 #### JDBC Master Slaver
 
 > 官方文档 https://activemq.apache.org/masterslave
