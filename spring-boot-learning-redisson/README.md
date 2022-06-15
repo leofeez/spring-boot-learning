@@ -1,30 +1,40 @@
 # Redisson 分布式锁
 
-在单机情况下，利用JDK提供的锁即可满足，但是在分布式负载均衡的情况下，由于服务器实例之间的锁没办法共享，
-所以需要一个中间件实现在分布式的锁共享，本文就以Redis作为分布式锁的中间件。
+## 为什么需要分布式锁
+在单机情况下，利用JDK提供的锁即可满足，是基于JVM层面的锁机制，但是在分布式负载均衡的情况下，由于服务器实例之间的JVM是互相独立的，
+用JDK提供的锁没办法共享，所以需要一个中间件实现在分布式的场景下对锁的共享，典型的如 Redis 分布式锁。
 
-由于Redis是单线程单进程的，所以对于客户端的请求都是串行化去执行的，并且Redis也支持原子性，如Lua脚本，只需要将多个Redis的指令合并在一个Lua
-脚本发送到Redis就可以实现原子性操作。
+_为什么是Redis_
+由于Redis中的数据是存放在内存中，读写速度很快，并且是单线程单进程的，对于客户端的请求都是串行化去执行的，所以Redis的命令是支持原子性的，
+而对于多个redis指令，只需要将多个Redis的指令合并在一个Lua脚本发送到Redis就可以实现多条指令的原子性操作。
 
-## 实现流程
-加锁可以通过Redis的setnx命令实现，setnx的意思就是set if not exists.
-```java
-SETNX key value
-  summary: Set the value of a key, only if the key does not exist
-  since: 1.0.0
-  group: string
-```
-即当key不存在时才能设置成功，成功则返回1，否则返回0。
+对于分布式锁的加锁和解锁就要求必须是原子性的，而Redis就可以很好的支持这一特性。
 
-由于Redis是单线程的，所以当大量请求过来时，一定只有一个请求才能设置成功。
-
-为了防止发生死锁，我们还需要给这个key设置一个合理的过期时间，防止设置成功后，由于某些原因，客户端程序异常退出后没有进行解锁，导致key一直存在，
-最终所有的请求都无法设置成功，引发死锁的问题。
-
-如果业务处理时间超过了锁的有效期，锁会被提前释放，所以还需要一个机制去对锁进行续期，我们可以利用一个子线程去定时的给锁进行续期。
-
-## 
-
+## 如何利用Redis实现锁机制
+1. 加锁
+   可以通过Redis的`setnx`命令实现，`setnx`即 set if not exists，即当key不存在时才能设置成功，由于Redis是单线程的，
+   所以当大量请求过来时，一定只有一个请求才能设置成功，成功则返回1，否则返回0。
+   ```java
+      SETNX key value
+        summary: Set the value of a key, only if the key does not exist
+        since: 1.0.0
+        group: string
+   ```
+      
+2. 防止死锁
+   当客户端加锁之后，在释放锁之前如果发生了宕机，那么redis中的锁就无法自动释放，最终产生死锁。
+   所以为了避免死锁，我们还需要给这个key设置一个合理的过期时间，当锁占用的时间超过指定的过期时间，则自动删除该锁对应的key。
+   
+3. 锁过期提前释放
+   上一步由于为了避免死锁，所以在加锁时，指定了锁的有效期，但是这个有效期也是估算出来的，如果业务处理时间超过了锁的有效期，锁会被提前释放，
+   就会导致其他请求重新获得了锁，从而导致锁机制的失效。
+   所以为了解决该问题，还需要一个机制去对锁进行续期，防止锁在加锁的业务还未处理完，被提前释放，我们可以利用一个子线程去定时的给锁进行续期。
+   
+4. 释放锁
+   释放锁，只需要将对应的锁的key从redis中删除即可，但是这里需要注意的是，在释放锁之前，必须判断只有是当前线程占用的锁才可以进行释放。
+   
+综合以上的对Redis实现锁的思路分析，已经有了对应的开源框架的实现，就是 `Redisson`，`Redisson` 不仅实现了基于Redis实现加锁，解锁，还提供了
+防死锁，锁续期，以及可重入的锁的功能，可以说能够满足大多数的场景了。
 
 ## Redisson原理
 
@@ -32,27 +42,20 @@ Redisson 提供RLock的接口，是继承于Lock，并扩展提供了基于过�
 
 首先看一段利用Redisson加锁的代码：
 ```java
-        String orderName = Thread.currentThread().getName();
-        String stockId = UUID.randomUUID().toString();
-
+        // 获取锁对象
         RLock lock = redissonClient.getLock("stockLock" + stockId);
-
-        boolean locked = false;
         try {
-
-            log.info("订单：[{}]， 开始锁库存......", orderName);
-            locked = lock.tryLock(5, TimeUnit.SECONDS);
+            // 加锁， 5 代表锁过期自动释放的时间，单位为 秒
+            boolean locked = lock.tryLock(5, TimeUnit.SECONDS);
 
             if (locked) {
-                orderService.createOrder();
+                // 处理业务逻辑
             } else {
-                log.info("[{}]订单生成超时......", orderName);
+                // 未获取锁的逻辑
             }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         } finally {
             // 只有持有锁的线程才能释放锁
-            if (locked && lock.isHeldByCurrentThread()) {
+            if (lock.isLocked() && lock.isHeldByCurrentThread()) {
                 lock.unlock();
             }
         }
