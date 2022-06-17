@@ -16,14 +16,17 @@
 ### Broker
 消息服务器，作为server提供消息核心服务。
 
-### Queue
-- P2P：Queue：
+### Destination
+Destination 目的地，是由消息生产者将消息发送到何处以及消费者消费消息的来源。
+
+#### Queue
+Queue 称为 队列，是基于点对点的P2P模式，有以下特点：
   - 点对点的，消息被消费之后就会消失，所以不会出现重复消费
   - 支持多个Consumer，但是对于一个Message而言，只会被一个Consumer消费。如果消费者没有消费，消息会一直在队列中等待消费。
 
-### Topic 
-- PUB/SUB发布/订阅
-  - Topic，支持多个订阅者订阅，当消息发布到Topic中后，所有的订阅者都会受到消息
+#### Topic 
+Topic 是基于 Pub/Sub 发布订阅的模式：
+  - 支持多个订阅者订阅，当消息发布到Topic中后，所有的订阅者都会受到消息
   - 如果消息发布到Topic中，但是没有消费者，此时会丢失Topic
   - 消费者要先进行订阅，才能接收到消息
 
@@ -38,6 +41,27 @@
 - 异步消费。客户可以为消费者注册一个消息监听器，以定义在消息到达时所采取的动作。
 
 ### Message
+Message是在JMS标准中的数据载体，即我们需要发送的消息都需要封装成该对象，目前常见的消息类型主要有以下几种：
+- `TextMessage`：传输的是文本类型的消息。
+- `MapMessage`：传输基于 `key - value` 键值对的消息。
+- `ObjectMessage`：传输可序列化的对象数据。
+- `ByteMessage`：传递字节类型的，如文件。
+- `StreamMessage`
+
+消息中除了我们需要传送的数据外，还包含了一些其他关键的信息：
+- 消息头
+    * JMSMessageID：消息的唯一标识
+    * JMSCorrelationID：可以用作类似于消息会话的ID
+    * ReplyTo：消息接收后的应答 Destination
+    * JMSDeliveryMode：消息是否持久化
+    * JMSPriority：消息的优先级，高优先级的消息会优先被消费
+    * JMSExpiration：消息的过期时间，如：消息过期后会进入到死信队列。
+    * .....
+    
+- 消息额外属性（Property）
+  消息的额外属性可用作消费者在消费消息是利用selector去过滤消费指定的规则。
+  
+- 消息体，即需要真实发送的业务数据。
   
 ## ActiveMQ
 
