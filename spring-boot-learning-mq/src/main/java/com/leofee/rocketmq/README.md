@@ -20,4 +20,10 @@
       # 启动 name server
       ./mqnamesrv
    ```
+   
+4. 启动name server 之后，我们再启动 broker
+   ```shell
+      # -n localhost:9876 代表broker需要将自身的信息注册到name server 中
+      ./mqbroker -n localhost:9876
+   ```
 
