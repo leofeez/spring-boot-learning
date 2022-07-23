@@ -25,5 +25,22 @@
    ```shell
       # -n localhost:9876 代表broker需要将自身的信息注册到name server 中
       ./mqbroker -n localhost:9876
+   
+      # 输出 The broker[localhost.localdomain, 192.168.248.131:10911] boot success. serializeType=JSON and name server is localhost:9876
+      # 表示启动成功，并且 name server 是 localhost:9876
    ```
 
+## 发送消息
+
+```java
+    // producer
+    DefaultMQProducer producer=new DefaultMQProducer("hello_world_group");
+    // 指定 name server
+    producer.setNamesrvAddr("192.168.248.131:9876");
+    Message message=new Message("hello_world","hello rocketmq".getBytes());
+    producer.start();
+    // 同步消息发送
+    SendResult sendResult=producer.send(message);
+    System.out.println(sendResult);
+```
+批量发送，`producer.send` 支持批量发送
