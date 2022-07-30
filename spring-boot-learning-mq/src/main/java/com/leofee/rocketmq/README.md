@@ -148,3 +148,5 @@
     });
     // 创建对应的过滤器 MessageSelector selector = MessageSelector.bySql("order > 5 and order <= 10 "); consumer.subscribe("test_tag", selector);   consumer.start();
 ```
+
+## 事务消息
