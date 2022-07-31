@@ -11,6 +11,7 @@ import org.apache.rocketmq.client.producer.SendCallback;
 import org.apache.rocketmq.client.producer.SendResult;
 import org.apache.rocketmq.common.message.Message;
 import org.apache.rocketmq.common.message.MessageExt;
+import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.junit.Test;
 
@@ -28,6 +29,9 @@ public class RocketMqClientTest {
     public void producer() throws Exception {
         DefaultMQProducer producer = new DefaultMQProducer("hello_world_producer_group");
         producer.setNamesrvAddr("192.168.248.131:9876");
+        producer.setRetryTimesWhenSendFailed(3);
+
+        producer.setRetryAnotherBrokerWhenNotStoreOK(true);
         producer.start();
         Message message = new Message("hello_world", "hello rocketmq".getBytes());
         // 同步消息发送
@@ -67,6 +71,7 @@ public class RocketMqClientTest {
         consumer.setNamesrvAddr("192.168.248.131:9876");
         consumer.setConsumerGroup("hello_world_consumer_group");
         consumer.subscribe("hello_world", "*");
+        consumer.setMessageModel(MessageModel.CLUSTERING);
         consumer.registerMessageListener((MessageListenerConcurrently) (msgs, context) -> {
             for (MessageExt msg : msgs) {
                 System.out.println(new String(msg.getBody()));

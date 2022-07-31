@@ -71,7 +71,13 @@
     });
 ```
 
+### 指定Queue发送消息，保证消息的顺序性
+
+
 ## 消费消息
+消费者消费，在RocketMQ中支持两种模式：
+- MessageModel.CLUSTERING（集群）: 该模式为默认的，类似于P2P模式，在该模式下，一个*ConsumerGroup*中只会有一个Consumer 会接收到对应的消息进行消费。
+- MessageModel.BROADCASTING（广播）:该模式为广播模式，订阅了对应的Topic，所有的消费者都会接收到对应的消息。
 
 ```java
     DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("hello_world_consumer_group");
@@ -91,7 +97,12 @@
     consumer.start();
 ```
 
-## 消息过滤
+### 消息消费的ACK机制
+在RocketMQ中，消息的ACK机制是依靠MessageListener的返回值进行决定：
+- ConsumeConcurrentlyStatus.CONSUME_SUCCESS
+- ConsumeConcurrentlyStatus.RECONSUME_LATER
+
+### 消息过滤
 
 1. 通过 `Tag` 过滤消息
 
@@ -149,7 +160,7 @@
     // 创建对应的过滤器 MessageSelector selector = MessageSelector.bySql("order > 5 and order <= 10 "); consumer.subscribe("test_tag", selector);   consumer.start();
 ```
 
-## 事务消息
+### 事务消息
 RocketMQ中提供了分布式事务的功能，常见的分布式事务的可以使用 2PC，TCC(try-catch-cancel)，RocketMQ采用的是2PC的方式，即消息发送之后
 并不会立马被消费者消费，需要Producer对事务消息进行commit，消费者才可以真正的去消费这条消息，在RocketMQ中该机制称为
 Half message
@@ -196,3 +207,17 @@ RocketMQ的事务消息共有三个事务状态：
 - `LocalTransactionState.COMMIT_MESSAGE`
 - `LocalTransactionState.ROLLBACK_MESSAGE`
 - `LocalTransactionState.UNKNOW`
+
+## 重试机制
+
+### 如何保证消息消费的顺序
+在RocketMQ中，以Topic作为broker中最小的逻辑单位，在一个Topic中还包含若干个Queue，真正保存消息的其实还是Queue，只有在同一个Queue中的消息才是有序的，即FIFO。
+
+生产者发送消息保证顺序：
+1. 在保证消息的消费顺序前，首先需要保证在发送消息到RocketMQ中的发送顺序，建议使用单线程去发送。
+2. 消息发送时，需要将消息都发送到同一个Queue中，利用RocketMQ中send(msg, MessageQueueSelector, args)方法指定对应的Queue。
+
+消费者消费消息保证顺序：
+1. 消费者消费注册监听器应该使用 MessageListenerOrderly而不是MessageListenerConcurrently
+
+
