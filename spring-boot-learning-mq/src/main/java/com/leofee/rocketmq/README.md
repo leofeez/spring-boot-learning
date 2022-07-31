@@ -150,3 +150,49 @@
 ```
 
 ## 事务消息
+RocketMQ中提供了分布式事务的功能，常见的分布式事务的可以使用 2PC，TCC(try-catch-cancel)，RocketMQ采用的是2PC的方式，即消息发送之后
+并不会立马被消费者消费，需要Producer对事务消息进行commit，消费者才可以真正的去消费这条消息，在RocketMQ中该机制称为
+Half message
+
+```java
+    TransactionMQProducer producer = new TransactionMQProducer("transaction_producer_group");
+        producer.setNamesrvAddr("192.168.248.131:9876");
+
+        // Transaction Listener
+        producer.setTransactionListener(new TransactionListener() {
+            @Override
+            public LocalTransactionState executeLocalTransaction(Message msg, Object arg) {
+                System.out.println("executeLocalTransaction -> args:" + arg);
+                System.out.println("executeLocalTransaction -> message:" + msg);
+                System.out.println("executeLocalTransaction -> message transaction id :" + msg.getTransactionId());
+
+                // 执行本地事务操作
+                    
+                /*
+                 * COMMIT_MESSAGE: 表示事务可以提交
+                 * ROLLBACK_MESSAGE: 表示事务需要回滚
+                 * UNKNOW: 表示事务需要等待
+                 */
+                return LocalTransactionState.COMMIT_MESSAGE;
+            }
+
+            @Override
+            public LocalTransactionState checkLocalTransaction(MessageExt msg) {
+                // 检查本地事务的状态
+                // 该方法是由RocketMQ开启定时去检查本地事务的状态
+                System.out.println("checkLocalTransaction -> message transaction id:" + msg.getTransactionId());
+        
+                // return LocalTransactionState.UNKNOW;
+                return LocalTransactionState.COMMIT_MESSAGE;
+            }
+        });
+        producer.start();
+        Message message = new Message("transaction_message_topic", "hello transaction message".getBytes(StandardCharsets.UTF_8));
+
+        // Transaction message
+        producer.sendMessageInTransaction(message, "hello transaction message");
+```
+RocketMQ的事务消息共有三个事务状态：
+- `LocalTransactionState.COMMIT_MESSAGE`
+- `LocalTransactionState.ROLLBACK_MESSAGE`
+- `LocalTransactionState.UNKNOW`
