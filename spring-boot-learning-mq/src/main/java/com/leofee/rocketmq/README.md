@@ -29,6 +29,27 @@
       # 输出 The broker[localhost.localdomain, 192.168.248.131:10911] boot success. serializeType=JSON and name server is localhost:9876
       # 表示启动成功，并且 name server 是 localhost:9876
    ```
+## Broker
+
+Broker 作为MQ中处理消息的服务，在RocketMQ中，当Broker启动时，会向所有NameServer注册自己的相关信息，如地址等，后续会周期性的向
+NameServer发送心跳。
+
+- 启动注册:`BrokerStartUp#start() -> BrokerController#registerBrokerAll() -> BrokerOutAPI#registerBrokerAll()`
+- 发送心跳: `BrokerController#scheduleSendHeartbeat()`
+
+
+## NameServer
+NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了一个`BrokerAddrTable`，记录了所有Broker的信息，
+当Broker向Nameserver发送注册请求时，交由`DefaultRequestProcessor#processRequest`进行处理请求，在该方法内部根据`RemotingCommand`中的
+请求code`RequestCode`来区分当前的请求具体是哪一种类型，如`RequestCode#REGISTER_BROKER`，当接受到注册Broker的请求时，会执行
+`RouteInfoManager#registerBroker`，将申请注册的Broker信息添加到`RouteInfoManager#brokerAddrTable`中。
+
+除了将Broker信息注册后，还会对将Broker中的Topic以及Queue信息进行注册，Topic相关的信息都是存在`TopicConfig`中，将Topic存储到`RoutingInfoManager#topicQueueTable`
+
+## Producer
+
+## Consumer
+
 
 ## 发送消息
 
@@ -139,11 +160,10 @@
     producer.setNamesrvAddr("192.168.248.131:9876");
     producer.start();   
     // 批量发送 List<Message> messageList = new ArrayList<>();  for (int i = 0; i < 5; i++) {
-            Message message = new Message("test_tag", "TAG-B", ("hello rocketmq" + i).getBytes());
-            // 设置对应的属性
-            message.putUserProperty("order", i + "");
-            messageList.add(message);
-    }
+    Message message = new Message("test_tag", "TAG-B", ("hello rocketmq" + i).getBytes());
+    // 设置对应的属性
+    message.putUserProperty("order", i + "");
+    messageList.add(message);
     SendResult sendBatch = producer.send(messageList);
 ```
 
@@ -220,4 +240,17 @@ RocketMQ的事务消息共有三个事务状态：
 消费者消费消息保证顺序：
 1. 消费者消费注册监听器应该使用 MessageListenerOrderly而不是MessageListenerConcurrently
 
+## 消费者如何监听broker是否存在消息
+1. 普通轮询机制，间隔一定周期向server端broker发起请求，查看是否有消息存在，这种方式当消费者数量比较大，会消耗server端性能，因为会发送
+大量无用请求。
+   
+2. 长连接，客户端与server端进行长连接，当服务端产生消息则实时推送给客户端进行消费，缺点是，server端需要与大量客户端建立连接，
+   并且需要维护客户端的状态，如果大量消息产生，采用推送的方式，是没有办法知道客户端的消费能力。
 
+3. 长轮询，客户端与server端进行连接，如果server端没有消息，则将连接进行挂起，当收到消息则告诉消费端，将主动权移交给客户端，进行拉取消息进行
+消费，这样消费端可以根据自身的消费能力进行消息消费。
+
+## 消费者启动流程分析
+
+1. 默认的消费者 `DefaultMQPushConsumer`，从该类的名称上看，消费消息的机制是按照Push的方式，其实在底层还是有consumer从broker中拉取消息。
+2. 消费者启动 `DefaultMQPushConsumer#start();`

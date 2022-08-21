@@ -33,4 +33,4 @@
 ## spring-boot mq
 - [spring-boot-mq](./spring-boot-learning-mq)
   - spring-boot 集成 ActiveMQ。
-  - spring-boot 继承 RocketMQ。
+  - spring-boot 集成 RocketMQ。
