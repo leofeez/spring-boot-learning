@@ -651,14 +651,14 @@ public class ActiveMqConfig {
    在 `activemq/bin`下的`env`配置中指定java的安装路径
 5. 启动 activemq 服务 `./activemq start`
    
-    ![img.png](activemq-start.png)
+    ![img.png](img/activemq-start.png)
 
 ## 访问Linux上的ActiveMq服务
 本人使用的是VMware开启的Cent OS 7 的虚拟机为例。
 
 1. 查看防火墙是否开启 `systemctl status firewalld`
 
-    ![img.png](systemctl-status.png)
+    ![img.png](img/systemctl-status.png)
 
     running 代表是开启的
 
@@ -680,7 +680,7 @@ public class ActiveMqConfig {
     cd /usr/local/apache-activemq-5.16.4/conf/
     vi jetty.xml
    ```
-    ![img.png](jetty-host.png)
+    ![img.png](img/jetty-host.png)
    
     默认为`127.0.0.1`表示本地访问，所以需要将host修改为 `0.0.0.0`开启远程访问。
    

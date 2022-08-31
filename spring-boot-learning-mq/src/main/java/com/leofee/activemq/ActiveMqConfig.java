@@ -1,5 +1,6 @@
 package com.leofee.activemq;
 
+import org.apache.activemq.ActiveMQConnectionFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.annotation.EnableJms;
@@ -8,6 +9,9 @@ import org.springframework.jms.config.JmsListenerContainerFactory;
 
 import javax.jms.ConnectionFactory;
 
+/**
+ * @author leofee
+ */
 @EnableJms
 @Configuration
 public class ActiveMqConfig {
@@ -19,7 +23,7 @@ public class ActiveMqConfig {
      * @return
      */
     @Bean
-    public JmsListenerContainerFactory<?> queue(ConnectionFactory jmsConnectionFactory) {
+    public JmsListenerContainerFactory<?> queue(ActiveMQConnectionFactory jmsConnectionFactory) {
         DefaultJmsListenerContainerFactory queueContainer = new DefaultJmsListenerContainerFactory();
         queueContainer.setConnectionFactory(jmsConnectionFactory);
         return queueContainer;

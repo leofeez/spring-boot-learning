@@ -1,6 +1,5 @@
 package com.leofee.activemq;
 
-import com.leofee.activemq.ActiveMqConfig;
 import lombok.Data;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.junit.Test;

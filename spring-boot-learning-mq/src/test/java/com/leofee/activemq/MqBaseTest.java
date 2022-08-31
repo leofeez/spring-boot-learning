@@ -13,6 +13,7 @@ public class MqBaseTest {
     @Before
     public void initActiveMQConnectionFactory() {
         // 默认的 broker url 为 tcp://localhost:61616
+        // 远程broker url 为 "tcp://192.168.248.131:61616"
         this.activeMQConnectionFactory = new ActiveMQConnectionFactory("admin", "admin123", ActiveMQConnectionFactory.DEFAULT_BROKER_URL);
     }
 }
