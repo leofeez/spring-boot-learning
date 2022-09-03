@@ -1,9 +1,35 @@
 # ActiveMQ
-[ActiveMQ 5 官方手册](https://activemq.apache.org/using-activemq-5)
+在学习ActiveMQ之前，我们首先需要了解一下在Java平台的消息通讯的一个标准规范，即JMS：
+> JMS即Java消息服务（Java Message Service）应用程序接口，是一个Java平台中关于面向消息中间件（MOM）的API，
+> 用于在两个应用程序之间，或分布式系统中发送消息，进行异步通信。
+> Java消息服务是一个与具体平台无关的API，绝大多数MOM提供商都对JMS提供支持。
 
-## Provider 生产消息
+通过JMS的介绍，我们发现其实`JMS`就是一套标准，具体的实现是交由具体的厂商去实现，就好像我们所熟知的`JDBC`一样，`JDBC`也是通过制定一套连接数据库
+的标准接口，如`java.sql.Driver`数据库驱动接口，数据库厂商对该接口进行实现，这样一来，我们只需要面向`JDBC`标准进行开发，而无需关注数据库连接的底层细节。
 
-生产者，消息生产者是由会话创建的一个对象，用于把消息发送到一个目的地（Queue/Topic）。
+## JMS中的标准接口
+在JMS的标准中定义了如下一些标准接口：
+- `javax.jms.ConnectionFactory`：与JMS服务建立连接的工厂对象，可以通过该工厂对象获取一个连接
+- `javax.jms.Connection`：封装了客户端与JMS服务的虚拟连接
+- `javax.jms.Session`：与JMS服务的会话，用于创建生产者（producer）、消费者（consumer）和消息（message）等。
+  Session是生产和消费消息的一个单线程上下文，提供了一个事务性的上下文，所以一组发送和接收都被包含在一个原子操作中。
+- `javax.jms.MessageProducer`: 由JMS会话创建的消息的生产者
+- `javax.jms.MessageConsumer`：由JMS会话创建的消息的消费者
+- `javax.jms.Destination`: 消息的目的地，指的是消息发送者需要将消息投递的目的地或者消费者消费消息的来源。
+    - `javax.jms.Queue`: 队列模式，基于点对点的消息模型
+    - `javax.jms.Topic`: 主题模式，基于订阅/发布的消息模型
+- `javax.jms.Message`：JMS中的消息
+
+以上这些不仅仅是接口，也代表着在JMS整个框架中的各个角色，从下图可以看出它们之间是如何进行协作的：
+
+![](img/jms.jpg)
+
+在JMS系统中，消息是传送数据的单位，消息可以非常简单，如一个字符串，也可以很复杂， 如对象结构，消息的传递需要一个队列作为载体，即消息队列，
+消息队列提供路由并保证消息的传递，如果发送消息时，接收者处于不可用状态，此时的消息会保留在队列中，直到成功的被接收者消费。
+
+## Provider 发送消息
+
+生产者，消息生产者是由会话创建的一个对象，用于把消息发送到一个目的地（`Destination`）。
 
 ```java
     // 获取一个连接
@@ -173,7 +199,7 @@ String text = receive.getText();
 session.commit();
 ```
 
-#### 3. 确认JMS消息 ACK
+#### 3. 消息确认 ACK
 
 消息的成功消费可以分为三个阶段，消费者接受消息，消费者处理消息，消费者确认（ACK）。
 
@@ -789,8 +815,9 @@ master节点，未成功获取锁的broker为slaver，这时候的slaver会处�
 1. 如何防止消息丢失
 
  	2. 如何防止消息的重复消费
-     - 接口保证幂等性
-
+     
+- 接口保证幂等性
+     
 3. 如何保证消费顺序
 
  4. 如果发送了100条消息到broker中，如果consumer在消费第50条消息时，mq发生了宕机，mq重启后是否可正确的从弟51条开始消费？
