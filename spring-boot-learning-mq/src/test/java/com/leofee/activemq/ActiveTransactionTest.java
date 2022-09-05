@@ -6,14 +6,14 @@ import javax.jms.*;
 
 //@RunWith(SpringJUnit4ClassRunner.class)
 //@SpringBootTest(classes = ActiveMqConfig.class)
-public class ActiveTransactionTest extends MqBaseTest {
+public class ActiveTransactionTest extends ActiveMqBaseTest {
 
     @Test
     public void producer() throws Exception {
 
         Connection connection = activeMQConnectionFactory.createConnection();
 
-        // 以非事务方式创建 producer
+        // 以事务方式创建 producer
         Session session = connection.createSession(true, Session.SESSION_TRANSACTED);
 
         Queue queue = session.createQueue("leofee_trx");

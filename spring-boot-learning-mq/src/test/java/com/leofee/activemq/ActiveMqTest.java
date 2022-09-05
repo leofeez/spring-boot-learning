@@ -1,9 +1,6 @@
 package com.leofee.activemq;
 
-import org.apache.activemq.ActiveMQConnection;
-import org.apache.activemq.ActiveMQSession;
 import org.apache.activemq.ScheduledMessage;
-import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.Test;
 
@@ -11,7 +8,7 @@ import javax.jms.*;
 import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 
-public class ActiveMqTest extends MqBaseTest {
+public class ActiveMqTest extends ActiveMqBaseTest {
 
     @Test
     public void producer() throws Exception {
@@ -29,7 +26,8 @@ public class ActiveMqTest extends MqBaseTest {
 
         // 默认消息的持久化是开启的
         // 可通过设置DeliveryMode.NON_PERSISTENT
-        producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
+        producer.setDeliveryMode(DeliveryMode.PERSISTENT);
+        producer.setPriority(9);
 
         // 发送消息到队列
         TextMessage textMessage = session.createTextMessage("hello");
@@ -37,7 +35,9 @@ public class ActiveMqTest extends MqBaseTest {
 
         // MapMessage，接口为 k-v 键值对
         MapMessage mapMessage = session.createMapMessage();
-        mapMessage.setString("k", "world");
+        mapMessage.setString("hello", "world");
+        mapMessage.setString("world", "hello");
+        mapMessage.setBoolean("happy", true);
         producer.send(mapMessage);
 
         ObjectMessage objectMessage = session.createObjectMessage();
@@ -65,15 +65,16 @@ public class ActiveMqTest extends MqBaseTest {
 
             // receive 不指定时间，则该方法会阻塞，直到接收到消息
             Message message = consumer.receive();
+            System.out.println("接收到消息：" + message);
 
             // receive 支持指定超时时间，当超过指定时间后，receive 会返回 null
             // Message messageWithTimeOut = consumer.receive(10000);
-            System.out.println("time:" + message.getJMSTimestamp());
-            System.out.println("brokerInTime:" + ((ActiveMQMessage)message).getBrokerInTime());
-            System.out.println("brokerOutTime:" + ((ActiveMQMessage)message).getBrokerOutTime());
-            System.out.println("messageId:" + message.getJMSMessageID());
-            System.out.println("deliveryMode:" + message.getJMSDeliveryMode());
-            System.out.println("timestamp:" + message.getJMSTimestamp());
+//            System.out.println("time:" + message.getJMSTimestamp());
+//            System.out.println("brokerInTime:" + ((ActiveMQMessage)message).getBrokerInTime());
+//            System.out.println("brokerOutTime:" + ((ActiveMQMessage)message).getBrokerOutTime());
+//            System.out.println("messageId:" + message.getJMSMessageID());
+//            System.out.println("deliveryMode:" + message.getJMSDeliveryMode());
+//            System.out.println("timestamp:" + message.getJMSTimestamp());
             System.out.println("priority:" + message.getJMSPriority());
 
             if (message instanceof TextMessage) {
@@ -81,9 +82,15 @@ public class ActiveMqTest extends MqBaseTest {
                 System.out.println(text);
             }
 
+            // MapMessage
             if (message instanceof MapMessage) {
-                String text = ((MapMessage)message).getString("k");
-                System.out.println(text);
+                // 遍历出MapMessage中所有的消息内容
+                MapMessage mapMessage = (MapMessage) message;
+                for (Enumeration<?> enumeration = mapMessage.getMapNames(); enumeration.hasMoreElements();) {
+                    String key = (String) enumeration.nextElement();
+                    System.out.print("key:" + key);
+                    System.out.println(", value:" + mapMessage.getString(key));
+                }
             }
 
             if (message instanceof ObjectMessage) {
@@ -108,8 +115,6 @@ public class ActiveMqTest extends MqBaseTest {
 
         consumer.setMessageListener(message -> {
             try {
-                // receive 支持指定超时时间，当超过指定时间后，receive 会返回 null
-                // Message messageWithTimeOut = consumer.receive(10000);
                 System.out.println("messageId:" + message.getJMSMessageID());
                 System.out.println("deliveryMode:" + message.getJMSDeliveryMode());
                 System.out.println("timestamp:" + message.getJMSTimestamp());
@@ -145,7 +150,7 @@ public class ActiveMqTest extends MqBaseTest {
         Queue queue = session.createQueue("leofee_exclusive_queue");
         MessageProducer producer = session.createProducer(queue);
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 10; i++) {
             TextMessage message = session.createTextMessage();
             message.setText("leofee" + i);
             // 注意是Property，而不是value
@@ -320,9 +325,10 @@ public class ActiveMqTest extends MqBaseTest {
         MessageConsumer consumer = session.createConsumer(queue);
         consumer.setMessageListener(message -> {
             try {
+                System.out.println("requestor consumer 接收到消息" + ((TextMessage)message).getText());
                 Destination replyTo = message.getJMSReplyTo();
                 TextMessage textMessage = session.createTextMessage();
-                textMessage.setText("你好 requestor");
+                textMessage.setText("你好 requestor，我接收到你发送过来的消息了：" + ((TextMessage)message).getText());
                 MessageProducer producer = session.createProducer(replyTo);
                 producer.send(textMessage);
                 connection.close();

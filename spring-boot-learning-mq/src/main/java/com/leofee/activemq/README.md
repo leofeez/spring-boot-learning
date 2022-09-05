@@ -18,23 +18,23 @@
 - `javax.jms.Destination`: 消息的目的地，指的是消息发送者需要将消息投递的目的地或者消费者消费消息的来源。
     - `javax.jms.Queue`: 队列模式，基于点对点的消息模型
     - `javax.jms.Topic`: 主题模式，基于订阅/发布的消息模型
-- `javax.jms.Message`：JMS中的消息
+- `javax.jms.Message`：JMS中的消息.
 
 以上这些不仅仅是接口，也代表着在JMS整个框架中的各个角色，从下图可以看出它们之间是如何进行协作的：
 
 ![](img/jms.jpg)
 
-在JMS系统中，消息是传送数据的单位，消息可以非常简单，如一个字符串，也可以很复杂， 如对象结构，消息的传递需要一个队列作为载体，即消息队列，
-消息队列提供路由并保证消息的传递，如果发送消息时，接收者处于不可用状态，此时的消息会保留在队列中，直到成功的被接收者消费。
+而ActiveMQ就是JMS标准的一个典型的实现，下面我们再看一下，基于ActiveMQ是如何使用消息队列的。
 
 ## Provider 发送消息
 
-生产者，消息生产者是由会话创建的一个对象，用于把消息发送到一个目的地（`Destination`）。
+生产者，消息生产者是由会话创建的一个对象，用于把消息发送到一个目的地（`Destination`）：
 
 ```java
     // 获取一个连接
-    ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory();
+    ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("admin", "admin", "tcp://192.168.248.131:61616");
     Connection connection = connectionFactory.createConnection();
+	connection.start();
 
     // 以非事务方式(transacted = false)创建 session
     Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
@@ -44,11 +44,15 @@
 
     // 创建消息的生产者
     MessageProducer producer = session.createProducer(queue);
+    // 消息持久化
     producer.setDeliveryMode(DeliveryMode.PERSISTENT);
 
     // 发送消息到队列
     TextMessage textMessage = session.createTextMessage("hello");
+	// 消息发送默认是异步的
     producer.send(queue, textMessage);
+	// 关闭连接
+	connection.close();
 ```
 
 ## Consumer 消费消息
@@ -56,14 +60,14 @@
 消费者，消息消费者是由会话创建的一个对象，它用于接收发送到目的地的消息。
 ```java
     // 获取一个连接
-    ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory();
+    ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("admin", "admin", "tcp://192.168.248.131:61616");
     Connection connection = connectionFactory.createConnection();
     connection.start();
 
     // 以非事务方式(transacted = false)创建 session
     Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
 
-    // 创建队列
+    // 指定消费的队列
     Queue queue = session.createQueue("leofee_queue");
 
     // 创建消息的消费者
@@ -71,6 +75,7 @@
 
     // receive 不指定时间，则该方法会阻塞，直到接收到消息
     Message message = consumer.receive();
+	
 ```
 
 消息的消费可以采用以下两种方法之一：
@@ -95,23 +100,48 @@ Browser 在 ActiveMQ 中的角色是用于查看队列中的消息，类似于Ja
 
 ```java
     QueueBrowser browser = session.createBrowser(queue);
-        Enumeration enumeration = browser.getEnumeration();
-        while (enumeration.hasMoreElements()) {
-            System.out.println(enumeration.nextElement());
+    Enumeration enumeration = browser.getEnumeration();
+    while (enumeration.hasMoreElements()) {
+        System.out.println(enumeration.nextElement());
     }
 ```
 
 ## Message
+消息是传送数据的单位，消息可以非常简单，如一个字符串，也可以很复杂， 如对象结构，消息的传递需要一个队列作为载体，即消息队列，
+消息队列提供路由并保证消息的传递，如果发送消息时，接收者处于不可用状态，此时的消息会保留在队列中，直到成功的被接收者消费。
 
-#### 消息的类型
+### 消息的类型
 
 - TextMessage: 字符类型
+
 - ActiveMQObjectMessage: 对象结构型数据
+
 - MapMessage: k-v 键值对类型数据
+
 - ByteMessage: 支持传输流
 
-#### 消息优先级
-消息的优先级可以保证消息消费的顺序性,优先级从0~9,由低到高
+- ObjectMessage:序列化的java对象，要传输该类型的消息，在高版本的ActiveMQ中需要在`${ACTIVEMQ_HOME}/bin/env`中设置对应的包的白名单
+
+  `-Dorg.apache.activemq.SERIALIZABLE_PACKAGES=com.leofee.*`
+
+  同时在消费端也需要设置对应的包名白名单：
+
+  `connectionFactory.setTrustedPackages(new ArrayList(Arrays.asList("org.apache.activemq.test,org.apache.camel.test".split(","))));`
+
+  或者
+
+  `connectionFactory.setTrustAllPackages(true);`
+
+  参考文档：[https://activemq.apache.org/objectmessage.html](https://activemq.apache.org/objectmessage.html)
+
+### 消息优先级
+
+消息的优先级可以保证消息消费的顺序性,优先级从0~9,由低到高，默认的优先级是4
+在设置优先级之前， 需要在`${ACTIVEMQ_HOME}/conf/activemq.xml`中开启优先级配置：
+```xml
+<policyEntry queue=">" prioritizedMessages="true"/>
+```
+在发送消息时，进行设置消息的优先级：
 ```java
 // 在send时指定
 producer.send(message, DeliveryMode.PERSISTENT, 9, 0);
@@ -119,7 +149,9 @@ producer.send(message, DeliveryMode.PERSISTENT, 9, 0);
 producer.setPriority(9);
 ```
 
-#### 消息的有效期
+消息优先级，底层依靠的是消息存储的索引排序，如：在基于kahadb日志文件持久化机制中， 优先级会参与索引的建立
+
+### 消息的有效期
 
 ```java
 // 在发送消息时指定超时时间
@@ -139,15 +171,21 @@ producer.setDeliveryMode(DeliveryMode.PERSISTENT);
 ```
 
 消息持久化支持以下几种类型：
-- kahadb：默认的持久化策略，日志存储，在ActiveMq目录的 `/data` 文件夹中
-  * db.data
-  * db.redo
-  * db-1.log
-  * lock
+- kahadb：默认的持久化策略，利用本地日志存储，在ActiveMq目录的 `${ACTIVEMQ_HOME}/data/kahadb` 文件夹中
+  * db.data：是存储消息的索引文件(数据结构为B树)，因为直接读取日志中的消息属于随机读写，性能低，有了索引，就可以大大减少随机读取的性能损耗。
+  * db.redo：用于进行消息恢复
+  * db-1.log：真正用于存放消息的日志文件，新的数据以append追加在文件末尾，所以始终都是顺序写入，存储速度更快，默认的文件大小是32M，当文件大小超出后，会进行递增，新建一个日志文件。
+  * lock：
   
-- jdbc：数据库存储，在activemq.xml中配置数据库连接信息。
+- jdbc：使用JDBC持久化方式，数据库默认会创建3个表，每个表的作用如下： 
   
-  1. 在`/conf/activemq.xml`中添加一个数据库连接池的bean，并添加对应的数据库驱动和连接池的jar包到`/lib`目录下。
+  - activemq_msgs：queue和topic的消息都存在这个表中 
+  - activemq_acks：存储持久订阅的信息和最后一个持久订阅接收的消息ID 
+  - activemq_lock：跟kahadb的lock文件类似，确保数据库在某一时刻只有一个broker在访问
+  
+  数据库存储，需要在activemq.xml中配置数据库连接信息。
+  
+  1. 在`${ACTIVEMQ_HOME}/conf/activemq.xml`中添加一个数据库连接池的bean，并添加对应的数据库驱动和连接池的jar包到`/lib`目录下。
   ```xml
     <!-- 此处使用的是Druid数据库连接池 -->
     <bean id="mysql-ds" class="com.alibaba.druid.pool.DruidDataSource" destroy-method="close"> 
@@ -167,10 +205,11 @@ producer.setDeliveryMode(DeliveryMode.PERSISTENT);
     </persistenceAdapter>
   ```
   3. 当生产者生产消息的时候，MQ会通过异步的方式将数据写入到数据库中
+  
 - jdbc journal：这种方式克服了JDBC Store的不足，JDBC存储每次消息过来，都需要去写库和读库。 ActiveMQ Journal，使用延迟存储数据到数据库，当消息来到时先缓存到文件中，延迟后才写到数据库中。
 当消费者的消费速度能够及时跟上生产者消息的生产速度时，journal文件能够大大减少需要写入到DB中的消息。
 
-当消息消费成功后，持久化中的消息就会被移除。
+**当消息消费成功后，持久化中的消息就会被移除。**
 
 #### 2. 消息是支持事务的
 
@@ -204,8 +243,8 @@ session.commit();
 消息的成功消费可以分为三个阶段，消费者接受消息，消费者处理消息，消费者确认（ACK）。
 
 - 消费者在开启事务的模式下，当发生commit时，消息也就随之ACK，如果只调用了`message.acknowledge()`但是没有commit，消息也就不会从队列移除。
-
-  ```java
+  
+```java
   // 消费者开启事务消费消息，则ACK机制默认是 SESSION_TRANSACTED 即使设置了CLIENT_ACKNOWLEDGE也是没有效果的
   Session session = connection.createSession(true, Session.CLIENT_ACKNOWLEDGE);
   
@@ -217,7 +256,7 @@ session.commit();
   
   // commit后会自动ACK,消息才会从队列中移除
   session.commit();
-  ```
+```
 
 - 消费者在非事务的模式下，消息的确认取决于设置的应答模式(Acknowledgement mode)，主要有以下几种：
     * `Session.AUTO_ACKNOWLEDGE`：当consumer.receive()方法返回时，或者从MessageListener.onMessage方法成功返回时，会自动确认消费者已经收到消息。
@@ -242,6 +281,7 @@ session.commit();
 
 批量确认消息
 在ActiveMQ中默认是支持批量的去确认消息，这样可以提升MQ的性能，当然也可以手动进行关闭：
+
 ```java
 new ActiveMQConnectionFactory("tcp://locahost:61616?jms.optimizeAcknowledge=false");
 ```
@@ -333,7 +373,7 @@ String selector = "age > 18";
 MessageConsumer consumer = session.createConsumer(queue, selector);
 ```
 
-需要注意的是，消息的selector过滤的规则是根据message的property进行过滤，而不是针对message的消息体。
+需要注意的是，**消息的`selector`过滤的规则是根据message的`property`进行过滤，而不是针对message的消息体**。
 
 ### 消息反馈 Reply To
 
@@ -433,9 +473,10 @@ public void reply() throws Exception {
         MessageConsumer consumer = session.createConsumer(queue);
         consumer.setMessageListener(message -> {
             try {
+                System.out.println("requestor consumer 接收到消息" + ((TextMessage)message).getText());
                 Destination replyTo = message.getJMSReplyTo();
                 TextMessage textMessage = session.createTextMessage();
-                textMessage.setText("你好 requestor");
+                textMessage.setText("你好 requestor，我接收到你发送过来的消息了：" + ((TextMessage)message).getText());
                 MessageProducer producer = session.createProducer(replyTo);
                 producer.send(textMessage);
                 connection.close();
@@ -715,10 +756,12 @@ public class ActiveMqConfig {
    
 ## ActiveMQ 支持的连接协议
 
+官方文档 [Transport configuration options](https://activemq.apache.org/configuring-version-5-transports)
+
 1. TCP：这是ActiveMQ默认的连接协议，并且是基于BIO模型。
 2. NIO：NIO是基于TCP协议，但是是非阻塞，所以使用该协议会提升ActiveMQ的性能表现。
 3. VM
-...
+  ...
 
 要从 TCP 切换到 NIO，只需更改 URI 的方案部分。这是在代理的 XML 配置文件中定义的示例。
 
@@ -815,9 +858,9 @@ master节点，未成功获取锁的broker为slaver，这时候的slaver会处�
 1. 如何防止消息丢失
 
  	2. 如何防止消息的重复消费
-     
+
 - 接口保证幂等性
-     
+  
 3. 如何保证消费顺序
 
  4. 如果发送了100条消息到broker中，如果consumer在消费第50条消息时，mq发生了宕机，mq重启后是否可正确的从弟51条开始消费？
