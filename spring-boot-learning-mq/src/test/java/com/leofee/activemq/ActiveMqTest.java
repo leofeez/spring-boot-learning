@@ -1,10 +1,11 @@
 package com.leofee.activemq;
 
-import org.apache.activemq.ScheduledMessage;
+import org.apache.activemq.*;
 import org.apache.activemq.command.ActiveMQQueue;
 import org.junit.Test;
 
 import javax.jms.*;
+import javax.jms.Message;
 import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 
@@ -338,5 +339,34 @@ public class ActiveMqTest extends ActiveMqBaseTest {
             }
         });
         latch.await();
+    }
+
+    @Test
+    public void producerAsync() throws Exception {
+        ActiveMQConnection connection = (ActiveMQConnection) this.activeMQConnectionFactory.createQueueConnection();
+        connection.start();
+        // 开启异步发送
+        connection.setUseAsyncSend(true);
+        ActiveMQSession session = (ActiveMQSession) connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+        Queue asyncQueue = session.createQueue("async_queue");
+        ActiveMQMessageProducer producer = (ActiveMQMessageProducer) session.createProducer(asyncQueue);
+        TextMessage textMessage = session.createTextMessage();
+        textMessage.setText("async producer");
+        CountDownLatch latch = new CountDownLatch(1);
+        producer.send(textMessage, new AsyncCallback() {
+            @Override
+            public void onSuccess() {
+                System.out.println("发送成功");
+                latch.countDown();
+            }
+
+            @Override
+            public void onException(JMSException exception) {
+                System.out.println("消息发送失败");
+            }
+        });
+
+        latch.await();
+        System.out.println("-------------");
     }
 }

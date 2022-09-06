@@ -349,7 +349,31 @@ message.setLongProperty(ScheduledMessage.AMQ_SCHEDULED_PERIOD, period);
 message.setIntProperty(ScheduledMessage.AMQ_SCHEDULED_REPEAT, repeat);
 ```
 
+### 消息发送原理
 
+#### 同步/异步发送消息
+
+|          | 开启事务 | 关闭事务 |
+| -------- | -------- | -------- |
+| 持久化   | 异步     | 同步     |
+| 非持久化 | 异步     | 异步     |
+
+由于异步发送可能会导致消息丢失，因为producer消息发送后，即使broker接收失败了，默认情况下是发送端是无法感知的，所以在异步发送时，我们可以利用`ActiveMQMessageProducer`发送消息时设置发送后的回调函数：
+
+```java
+ActiveMQMessageProducer producer = (ActiveMQMessageProducer) session.createProducer(asyncQueue);
+producer.send(textMessage, new AsyncCallback() {
+    @Override
+    public void onSuccess() {
+        // 消息发送成功
+    }
+
+    @Override
+    public void onException(JMSException exception) {
+        // 消息发送失败
+    }
+});
+```
 
 ### 消息过滤
 
@@ -507,9 +531,7 @@ QueueRequestor#request() 方法源码如下：
 ### JMSCorrelationID 消息会话ID
 在上面所说的 ReplyTo 机制可以实现，消费者在获取到消息后通过 ReplyTo 队列 通知生产者当前消息已经消费了，但是当有很多个消息的时候，
 生产者是无法知道某一个消息的具体情况的，所以ActiveMQ还提供了一个类似于会话ID的机制，即JMDCorrelationID，通过JMSCorrelationID
-能够让生产者监测到每一条具体消息的消费情况，从而做到更细粒度的消息监控。
-
-#### 
+能够让生产者监测到每一条具体消息的消费情况，从而做到更细粒度的消息监控。 
 
 ## PrefetchSize消费缓冲与消息积压
 在一般场景下，消费者端，一般来说消费的越快越好，broker的积压越小越好。
@@ -570,6 +592,7 @@ QueueRequestor#request() 方法源码如下：
 
 以上的规则可以在源码`org.apache.activemq.broker.region.Queue#doActualDispatch` 方法中，在broker中准备分发消息的时候会根据
 prefetchSize 进行判断`consumer.isFull()` 是否已经满了：
+
 ```java
             for (Subscription s : consumers) {
                 if (s instanceof QueueBrowserSubscription) {
