@@ -15,6 +15,8 @@ public enum RCode implements IRCode, BizAssert {
 
     USER_STATUS_INCORRECT("U_0003", "用户状态为【{0}】，无法执行该操作"),
 
+    MUST_NOT_BE_BLANK("C_0001", "{0}不能为空")
+
     ;
 
     private final String code;

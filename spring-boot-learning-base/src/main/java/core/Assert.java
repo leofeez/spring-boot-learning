@@ -16,8 +16,26 @@ public interface Assert {
         }
     }
 
+    default void notBlank(String obj, Object... messageArgs) {
+        if (StrUtil.isBlank(obj)) {
+            throw newException(messageArgs);
+        }
+    }
+
+    default void notEmpty(String obj, Object... messageArgs) {
+        if (StrUtil.isBlank(obj)) {
+            throw newException(messageArgs);
+        }
+    }
+
     default void eq(String src, String target, Object... messageArgs) {
         if (!StrUtil.equals(src, target)) {
+            throw newException(messageArgs);
+        }
+    }
+
+    default void state(boolean state, Object... messageArgs) {
+        if (!state) {
             throw newException(messageArgs);
         }
     }

@@ -1,4 +1,6 @@
+import cn.hutool.core.util.StrUtil;
 import constant.RCode;
+import core.BizAssert;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Getter;
@@ -12,15 +14,21 @@ public class TestAssert {
     @Test
     public void test() {
         User user = null;
-        RCode.USER_NOT_FOUND.notNull(user, "leofee");
+//        RCode.USER_NOT_FOUND.notNull(user, "leofee");
 
         user = new User();
+
+//        RCode.MUST_NOT_BE_BLANK.notBlank(user.getName(), "用户名称");
+
+        RCode.MUST_NOT_BE_BLANK.state(StrUtil.isNotBlank(user.getName()), "用户名称");
+
         user.setStatus(UserStatus.INVALID.getStatus());
         RCode.USER_STATUS_INCORRECT.eq(user.getStatus(), UserStatus.ACTIVE.getStatus(), UserStatus.of(user.getStatus()).getName());
     }
 
     @Data
     static class User {
+        String name;
         String status;
     }
 
