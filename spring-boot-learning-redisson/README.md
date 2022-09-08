@@ -16,15 +16,18 @@ _为什么是Redis_
 用一句话概括的说，其实Redis实现锁机制其实就是在Redis中设置一个key-value，当key存在时，即上锁，删除key即解锁。
 当然要想实现一个很全面的锁机制，这其中还有很多细节不容忽视，所以下面，我们一步一步的看看如何使用Redis实现一个分布式的锁：
 
-1. 加锁
-   可以通过Redis的`setnx`命令实现，`setnx`即 set if not exists，即当key不存在时才能设置成功，由于Redis是单线程的，
-   所以当大量请求过来时，一定只有一个请求才能设置成功，成功则返回1，否则返回0。
+1. 加锁保证互斥性，同一时间只能有一个客户端加锁成功。
+   - 通过Redis的`setnx`命令实现，`setnx`即 set if not exists，即当key不存在时才能设置成功，
    ```java
       SETNX key value
         summary: Set the value of a key, only if the key does not exist
         since: 1.0.0
         group: string
    ```
+   - (推荐)通过`set key value PX 3000 NX`，PX指过期时间，NX即not exists，效果等同setnx，但是由于 setnx 不支持设置过期时间，
+     所以需要拆分成两个两个命令`setnx key value` 和 `expire key 3`，要保证原子性还需要将两个命令合并为一个lua脚本
+   
+   由于Redis是单线程的，所以当大量请求过来时，一定只有一个请求才能设置成功，成功则返回1，否则返回0。
       
 2. 防止死锁
    当客户端加锁之后，在释放锁之前如果发生了宕机，那么redis中的锁就无法自动释放，最终产生死锁。
@@ -98,8 +101,8 @@ Redisson 提供RLock的接口，是继承于Lock，并扩展提供了基于过�
 
 第一步通过 `exists key `去判断锁的key是否存在，
 第二步，如果第一步中的判断返回0，表示 key 不存在，这时候可以加锁，利用`hset key value` 设置`key`的`value`，即`ARGV[2]`.
-> ARGV[2] 代表的是加锁的客户端的 ID，类似于下面这样：285475da-9152-4c83-822a-67ee2f116a79:52，在Redisson中即UUID + threadId。
-> 至于最后面的一个 1 是为了后面可重入做的计数统计，类似于AQS中的state。
+> ARGV[2] 代表了加锁的唯一标识，由UUID和线程id组成。一个Redisson客户端一个UUID，
+> UUID代表了一个唯一的客户端。所以由UUID和线程id组成了加锁的唯一标识，可以理解为某个客户端的某个线程加锁。
 
 第三步设置key的存活时间`internalLockLeaseTime`，这里 ARGV[1] 代表的是锁 key 的默认生存时间，默认 30 秒。
 
@@ -111,6 +114,31 @@ Redisson 提供RLock的接口，是继承于Lock，并扩展提供了基于过�
 3. 从上述描述可以看出，锁的key其实可以设置过期时间的，key一旦过期，redis就会清除这个key，如果当业务处理的时间超出了锁的有效期，这时候锁就会被其他
    客户端获取成功，会造成数据的不准确，所以在Redisson中还存在一个WatchDog的机制去对去定期（默认10秒）去给锁续期，即Redisson会开启一个子线程并利用定时器
    去定时对锁的有效期进行。
+   这里需要注意的是，**WatchDog机制只有在我们未手工指定对应的锁过期时间才会生效**
+   ```java
+      private <T> RFuture<Long> tryAcquireAsync(long leaseTime, TimeUnit unit, long threadId) {
+        // 如果在调用Redisson的锁方法时指定了过期释放的时间，则不会开启WatchDog机制
+        if (leaseTime != -1) {
+            return tryLockInnerAsync(leaseTime, unit, threadId, RedisCommands.EVAL_LONG);
+        }
+        RFuture<Long> ttlRemainingFuture = tryLockInnerAsync(
+                                                // 锁过期时间30s
+                                                commandExecutor.getConnectionManager().getCfg().getLockWatchdogTimeout(),
+                                                                TimeUnit.MILLISECONDS, threadId, RedisCommands.EVAL_LONG);
+        ttlRemainingFuture.onComplete((ttlRemaining, e) -> {
+            if (e != null) {
+                return;
+            }
+
+            // lock acquired
+            if (ttlRemaining == null) {
+                // 开启定时，周期去给对应的key进行续期
+                scheduleExpirationRenewal(threadId);
+            }
+        });
+        return ttlRemainingFuture;
+      }
+   ```
 
 4. unlock 释放锁，释放锁的时候需要判断当前的客户端（UUID + threadId）是否持有锁，只有持有锁的客户端才能释放锁。
 
