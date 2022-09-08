@@ -57,6 +57,11 @@ public class RocketTransactionMessageTest {
                 return LocalTransactionState.COMMIT_MESSAGE;
             }
 
+            /**
+             * 用于超时未确认消息事务的补偿机制，在该方法中，用于查询当前生产者的事务状态
+             * @param msg 消息
+             * @return 事务状态
+             */
             @Override
             public LocalTransactionState checkLocalTransaction(MessageExt msg) {
 

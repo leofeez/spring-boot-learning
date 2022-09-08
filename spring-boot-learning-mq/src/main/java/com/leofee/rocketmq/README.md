@@ -1,51 +1,22 @@
 # Rocket MQ
+RocketMQ是一个典型的发布-订阅的系统，我们先看下RocketMQ的简单架构图：
 
-## Linux 安装
-由于RocketMQ是基于Java编写的，所以需要先安装好Java的运行环境。并配置好环境变量。
-1. 准备Java环境: `vi /etc/profile`
-   ```bash
-      # 这里jdk路径根据实际情况
-      export JAVA_HOME=/opt/leofee/java/jdk1.8.0_221
-      export PATH=$PATH:$JAVA_HOME/bin
-    ```
-   
-2. 下载 RocketMQ 压缩包到Linux上，地址[官网 4.9.3 版本](https://www.apache.org/dyn/closer.cgi?path=rocketmq/4.9.3/rocketmq-all-4.9.3-bin-release.zip)
-   然后利用 unzip 进行解压（如果没有unzip，先执行 `yum install -y unzip`）
-   ```bash
-      unzip rocketmq-all-4.9.3-bin-release.zip
-   ```
-3. 切换到RocketMQ的bin目录下，启动 name server `./mqnamesrv`
-   ```bash
-      cd /usr/local/rocketmq-4.9.3/bin
-      # 启动 name server
-      ./mqnamesrv
-   ```
-   
-4. 启动name server 之后，我们再启动 broker
-   ```shell
-      # -n localhost:9876 代表broker需要将自身的信息注册到name server 中
-      # -c ../conf/2m-2s-async/broker-a.properties 表示指定加载指定配置文件(如：主从模式下，修改了配置需要指定配置文件)
-      ./mqbroker -n localhost:9876
-   
-      # 输出 The broker[localhost.localdomain, 192.168.248.131:10911] boot success. serializeType=JSON and name server is localhost:9876
-      # 表示启动成功，并且 name server 是 localhost:9876
-   ```
+![](img/RocketMQ.png)
+
 ## Broker
+Broker 在RocketMQ中的职责就是接收处理生产者发送过来的消息，并将消息中转给对应的消费端，从而实现生产者和消费者的解耦，除此之外，为了保证消息的可靠性，Broker还实现了消息的持久化。
 
-Broker 作为MQ中处理消息的服务，在RocketMQ中，当Broker启动时，会向所有NameServer注册自己的相关信息，如地址等，后续会周期性的向
-NameServer发送心跳。
+当Broker启动时，会向所有`NameServer`注册自己的相关信息，如地址等，后续会周期性的向`NameServer`发送心跳。
 
-- 启动注册:`BrokerStartUp#start() -> BrokerController#registerBrokerAll() -> BrokerOutAPI#registerBrokerAll()`
+- 启动流程:`BrokerStartUp#start() -> BrokerController#registerBrokerAll() -> BrokerOutAPI#registerBrokerAll()`
 - 发送心跳: `BrokerController#scheduleSendHeartbeat()`
 
 
 ## NameServer
-NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了一个`BrokerAddrTable`，记录了所有Broker的信息，
-当Broker向Nameserver发送注册请求时，交由`DefaultRequestProcessor#processRequest`进行处理请求，在该方法内部根据`RemotingCommand`中的
-请求code`RequestCode`来区分当前的请求具体是哪一种类型，如`RequestCode#REGISTER_BROKER`，当接受到注册Broker的请求时，会执行
-`RouteInfoManager#registerBroker`，将申请注册的Broker信息添加到`RouteInfoManager#brokerAddrTable`中。
+NameServer 是独立的一个无状态组件，接受 Broker 的元数据注册并动态维护着一些映射关系，同时为客户端（生产者和消费者）提供服务发现的能力，本质上类似于一个注册中心。
 
-除了将Broker信息注册后，还会对将Broker中的Topic以及Queue信息进行注册，Topic相关的信息都是存在`TopicConfig`中，将Topic存储到`RoutingInfoManager#topicQueueTable`
+在NameServer在内部维护了一个`BrokerAddrTable`，记录了所有Broker的信息， 当Broker向Nameserver发送注册请求时，
+交由`DefaultRequestProcessor#processRequest`进行处理请求，在该方法内部根据`RemotingCommand`中的请求code`RequestCode`来区分当前的请求具体是哪一种类型，如`RequestCode#REGISTER_BROKER`，当接受到注册Broker的请求时，会执行`RouteInfoManager#registerBroker`，将申请注册的Broker信息添加到`RouteInfoManager#brokerAddrTable`中。除了将Broker信息注册后，还会对将Broker中的Topic以及Queue信息进行注册，Topic相关的信息都是存在`TopicConfig`中，将Topic存储到`RoutingInfoManager#topicQueueTable`
 
 ## Producer
 
@@ -61,14 +32,15 @@ NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了�
     DefaultMQProducer producer=new DefaultMQProducer("hello_world_producer_group");
     // 2. 指定 name server
     producer.setNamesrvAddr("192.168.248.131:9876");
-    Message message=new Message("hello_world","hello rocketmq".getBytes());
+    Message message = new Message("hello_world","hello rocketmq".getBytes());
     producer.start();
     // 同步消息发送
-    SendResult sendResult=producer.send(message);
+    SendResult sendResult = producer.send(message);
     System.out.println(sendResult);
 ```
 
 ### 批量发送消息
+
 ```java
     // 批量发送
     List<Message> messageList = new ArrayList<>();
@@ -79,6 +51,8 @@ NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了�
 ```
 
 ### 异步发送
+由于异步发送存在消息丢失的可能性，所以需要增加一个发送的回调通知，在回调函数中处理发送失败和发送成功的具体处理逻辑。
+
 ```java
     // 异步发送
     producer.send(new Message("hello_world", "hello rocketmq async".getBytes(StandardCharsets.UTF_8)), new SendCallback() { 
@@ -238,8 +212,7 @@ NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了�
 
 ### 事务消息
 RocketMQ中提供了分布式事务的功能，常见的分布式事务的可以使用 2PC，TCC(try-catch-cancel)，RocketMQ采用的是2PC的方式，即消息发送之后
-并不会立马被消费者消费，需要Producer对事务消息进行commit，消费者才可以真正的去消费这条消息，在RocketMQ中该机制称为
-Half message
+并不会立马被消费者消费，需要Producer对事务消息进行commit，消费者才可以真正的去消费这条消息，在RocketMQ中该机制称为 `Half message`
 
 ```java
     TransactionMQProducer producer = new TransactionMQProducer("transaction_producer_group");
@@ -330,3 +303,35 @@ dLegerPeers = n0-192.168.150.210:40911;n1-192.168.150.211:40911
 dLegerSelfId = n0
 sendMessageThreadPoolNums = 4
 ```
+
+
+## Linux 安装
+由于RocketMQ是基于Java编写的，所以需要先安装好Java的运行环境。并配置好环境变量。
+1. 准备Java环境: `vi /etc/profile`
+   ```bash
+      # 这里jdk路径根据实际情况
+      export JAVA_HOME=/opt/leofee/java/jdk1.8.0_221
+      export PATH=$PATH:$JAVA_HOME/bin
+   ```
+
+2. 下载 RocketMQ 压缩包到Linux上，地址[官网 4.9.3 版本](https://www.apache.org/dyn/closer.cgi?path=rocketmq/4.9.3/rocketmq-all-4.9.3-bin-release.zip)
+   然后利用 unzip 进行解压（如果没有unzip，先执行 `yum install -y unzip`）
+   ```bash
+      unzip rocketmq-all-4.9.3-bin-release.zip
+   ```
+3. 切换到RocketMQ的bin目录下，启动 name server `./mqnamesrv`
+   ```bash
+      cd /usr/local/rocketmq-4.9.3/bin
+      # 启动 name server
+      ./mqnamesrv
+   ```
+
+4. 启动name server 之后，我们再启动 broker
+   ```shell
+      # -n localhost:9876 代表broker需要将自身的信息注册到name server 中
+      # -c ../conf/2m-2s-async/broker-a.properties 表示指定加载指定配置文件(如：主从模式下，修改了配置需要指定配置文件)
+      ./mqbroker -n localhost:9876
+   
+      # 输出 The broker[localhost.localdomain, 192.168.248.131:10911] boot success. serializeType=JSON and name server is localhost:9876
+      # 表示启动成功，并且 name server 是 localhost:9876
+   ```
