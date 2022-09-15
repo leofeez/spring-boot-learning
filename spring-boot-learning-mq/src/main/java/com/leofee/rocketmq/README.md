@@ -6,7 +6,7 @@ RocketMQ是一个典型的发布-订阅的系统，我们先看下RocketMQ的简
 ## Broker
 Broker 在RocketMQ中的职责就是接收处理生产者发送过来的消息，并将消息中转给对应的消费端，从而实现生产者和消费者的解耦，除此之外，为了保证消息的可靠性，Broker还实现了消息的持久化。
 
-当Broker启动时，会向所有`NameServer`注册自己的相关信息，如地址等，后续会周期性的向`NameServer`发送心跳。
+当Broker启动时，会向所有`NameServer`注册自己的相关信息，如地址，当前`Broker`中的`Topic`信息等，后续会周期性的向`NameServer`发送心跳。
 
 - 启动流程:`BrokerStartUp#start() -> BrokerController#registerBrokerAll() -> BrokerOutAPI#registerBrokerAll()`
 - 发送心跳: `BrokerController#scheduleSendHeartbeat()`
@@ -14,13 +14,27 @@ Broker 在RocketMQ中的职责就是接收处理生产者发送过来的消息�
 
 ## NameServer
 NameServer 是独立的一个无状态组件，接受 Broker 的元数据注册并动态维护着一些映射关系，同时为客户端（生产者和消费者）提供服务发现的能力，本质上类似于一个注册中心。
+NameServer内部维护的信息有以下几种：
+
+- 路由信息
+    * RocketMQ中的消息主题`Topic`相关的信息
+    * RocketMQ中消息服务`Broker`地址相关信息，
+    * RocketMQ中`Broker`与`Topic`的对应关系
+    * RocketMQ中`Broker Cluster`和`Broker`的对应关系
+    
+- 消费者组 `Consumer Group`
+
+当消息的生产者发送消息时，首先会通过NameServer寻找对应的Topic和Broker的路由规则，即消息发送的目的地（Destination）。
 
 在NameServer在内部维护了一个`BrokerAddrTable`，记录了所有Broker的信息， 当Broker向Nameserver发送注册请求时，
 交由`DefaultRequestProcessor#processRequest`进行处理请求，在该方法内部根据`RemotingCommand`中的请求code`RequestCode`来区分当前的请求具体是哪一种类型，如`RequestCode#REGISTER_BROKER`，当接受到注册Broker的请求时，会执行`RouteInfoManager#registerBroker`，将申请注册的Broker信息添加到`RouteInfoManager#brokerAddrTable`中。除了将Broker信息注册后，还会对将Broker中的Topic以及Queue信息进行注册，Topic相关的信息都是存在`TopicConfig`中，将Topic存储到`RoutingInfoManager#topicQueueTable`
 
 ## Producer
 
+
+
 ## Consumer
+
 
 
 ## 发送消息
@@ -67,7 +81,7 @@ NameServer 是独立的一个无状态组件，接受 Broker 的元数据注册�
     });
 ```
 
-### 指定Queue发送消息
+### 指定Queue发送消息 MessageQueueSelector
 指定消息发送的Queue通常用于控制消息发送的顺序，在RocketMQ中Topic下会存在多个Queue，如果不指定对应的Queue，那么消息会分布在Topic下的
 多个Queue中，这样就无法保证消息在MQ中的顺序，所以只有发送的消息都在同一个Queue中才能够保证消息的顺序，RocketMQ中在发送消息的时候，
 可以用通过使用`MessageQueueSelector`进行指定消息发送的目标Queue， 即在DefaultMQProducer中的send方法支持传入一个MessageQueueSelector。
@@ -91,8 +105,7 @@ NameServer 是独立的一个无状态组件，接受 Broker 的元数据注册�
 
 ## 消费消息
 消费者消费，在RocketMQ中支持两种模式：
-- MessageModel.CLUSTERING（集群）: 该模式为默认的，类似于P2P模式，在该模式下，一个*ConsumerGroup*中只会有一个Consumer 会接收到对应的消息进行消费，如果多个consumerGroup
-  都同时订阅该Topic则，多个consumerGroup都会消费到数据，所以才有了集群的概念
+- MessageModel.CLUSTERING（集群）: 该模式为默认的，类似于P2P模式，在该模式下，一个*ConsumerGroup*中只会有一个Consumer 会接收到对应的消息进行消费，如果多个consumerGroup都同时订阅该Topic则，多个consumerGroup都会消费到数据，所以才有了集群的概念。
    ```java
        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("hello_world_consumer_group");
        // Name Server
@@ -110,7 +123,7 @@ NameServer 是独立的一个无状态组件，接受 Broker 的元数据注册�
        // 开始接收消息
        consumer.start();
    ```
-
+  
 - MessageModel.BROADCASTING（广播）:该模式为广播模式，订阅了对应的Topic，所有的消费者都会接收到对应的消息。
 
 ### 消息消费的ACK机制
