@@ -353,10 +353,28 @@ message.setIntProperty(ScheduledMessage.AMQ_SCHEDULED_REPEAT, repeat);
 
 #### 同步/异步发送消息
 
+以下表格中是同步或者异步发送的默认策略：
+
 |          | 开启事务 | 关闭事务 |
-| -------- | -------- | -------- |
+| -------- | -------- | ------- |
 | 持久化   | 异步     | 同步     |
 | 非持久化 | 异步     | 异步     |
+
+除了上表格中的默认策略，我们也可以通过自定义设置实现异步发送：
+
+```java
+// connectionFactory级别设置
+ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(
+				"admin",
+				"admin",
+				"tcp://localhost:61616"
+				);
+connectionFactory.setUseAsyncSend(true);
+// connection 级别设置
+ActiveMQConnection connection = (ActiveMQConnection)connectionFactory.createConnection();
+connection.setUseAsyncSend(true);
+// 
+```
 
 由于异步发送可能会导致消息丢失，因为producer消息发送后，即使broker接收失败了，默认情况下是发送端是无法感知的，所以在异步发送时，我们可以利用`ActiveMQMessageProducer`发送消息时设置发送后的回调函数：
 

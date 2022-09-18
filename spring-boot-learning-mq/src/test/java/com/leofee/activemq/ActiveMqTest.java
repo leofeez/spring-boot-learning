@@ -6,6 +6,8 @@ import org.junit.Test;
 
 import javax.jms.*;
 import javax.jms.Message;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.concurrent.CountDownLatch;
 
