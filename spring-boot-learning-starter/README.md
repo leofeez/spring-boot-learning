@@ -108,3 +108,47 @@ public ConfigurableApplicationContext run(String... args) {
 }
 
 ```
+
+## 自定义一个Starter
+
+1.新建一个maven项目，引入Spring-boot的starter
+```xml
+    <?xml version="1.0" encoding="UTF-8"?>
+    <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>spring-boot-learning-starter</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>spring-boot-learning-starter</name>
+    <description>Demo project for Spring Boot</description>
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>com.leofee</groupId>
+        <artifactId>spring-boot-learning</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>
+
+```
+
+2.在resources下新建META-INF目录并添加spring.factories文件，文件内容如下：
+```java
+# 代表自己需要自动装配的配置类的全路径
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.leofee.starter.configuration.MyStarterAutoConfiguration
+```
+
+3. 用maven打包到本地仓库

@@ -37,6 +37,10 @@
             <artifactId>spring-boot-starter-activemq</artifactId>
         </dependency>
 
-
+        <dependency>
+            <groupId>com.leofee</groupId>
+            <artifactId>spring-boot-learning-starter</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
     </dependencies>
 </project>

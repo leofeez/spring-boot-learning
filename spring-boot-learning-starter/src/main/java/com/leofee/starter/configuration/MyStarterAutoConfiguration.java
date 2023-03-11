@@ -11,7 +11,7 @@ public class MyStarterAutoConfiguration {
 
     @Bean
     public MyConfig myConfig() {
-        System.out.println("==========my starter ============");
+        System.out.println("========== my starter is active ============");
         return new MyConfig();
     }
 }

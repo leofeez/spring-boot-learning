@@ -3,7 +3,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <artifactId>spring-boot-learning-starter</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0-SNAPSHOT</version>
     <name>spring-boot-learning-starter</name>
     <description>Demo project for Spring Boot</description>
     <packaging>jar</packaging>
@@ -24,5 +24,24 @@
             <artifactId>spring-boot-starter</artifactId>
         </dependency>
     </dependencies>
+
+    <!--
+
+        解决 repackage failed: Unable to find main class
+        由于父模块的打包插件默认是需要main class的
+        而当前模块只是打成jar包供其他模块引入
+        所以这里覆盖掉父模块的默认打包插件
+    -->
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <skip>true</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
