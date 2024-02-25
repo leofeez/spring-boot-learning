@@ -13,13 +13,12 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 
 /**
- * 利用注册 Bean 方式注册 Filter
+ * 利用注册 FilterRegistrationBean 方式注册 Filter
  *
  * @author leofee
  * @date 2019/6/26
  */
 @Slf4j
-@Component
 public class SecondHelloWorldFilter implements Filter {
 
     @Override

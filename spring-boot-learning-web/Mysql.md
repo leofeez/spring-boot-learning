@@ -28,8 +28,6 @@ SELECT DIGEST_TEXT,SUM_ROWS_SENT FROM events_statements_summary_by_digest ORDER 
 SELECT file_name,event_name,SUM_NUMBER_OF_BYTES_READ,SUM_NUMBER_OF_BYTES_WRITE FROM file_summary_by_instance ORDER BY SUM_NUMBER_OF_BYTES_READ + SUM_NUMBER_OF_BYTES_WRITE DESC
 ```
 
-
-
 ### 数据类型优化
 
 - 简单就好：如对于日期，能用date就使用date类型，不要使用varchar，首先是效率的问题， 其次无法使用日期的函数
@@ -66,16 +64,13 @@ MyISAM 与 InnoDB的区别：
   - 如果id相同，那么执行顺序从上到下
   - 如果id不同，如果是子查询，id的序号会递增，id值越大优先级越高，越先被执行
   - id相同和不同的，同时存在，相同的可以认为是一组，从上往下顺序执行，在所有组中，id值越大，优先级越高，越先执行
-
 - select_type：主要用来分辨查询的类型，是普通查询还是联合查询还是子查询
-
 - table：对应行正在访问哪一个表，表名或者别名，可能是临时表或者union合并结果集
-
 - **type**：显示的是访问类型，访问类型表示我是以何种方式去访问我们的数据，最容易想的是全表扫描，直接暴力的遍历一张表去寻找需要的数据，效率非常低下，访问的类型有很多，效率从最好到最坏依次是：system > **const** > eq_ref > **ref** > fulltext > ref_or_null > index_merge > unique_subquery > index_subquery > **range** > **index** > **ALL**
 
   - **ALL**：就是全表扫描
   - **index**：全索引扫描这个比ALL的效率要好，主要有两种情况，一种是当前的查询时覆盖索引，即我们需要的数据在索引中就可以索取，或者是使用了索引进行排序，这样就避免数据的重排序
-  - **range**：表示利用索引查询的时候限制了范围，在指定范围内进行查询，这样避免了index的全索引扫描，适用的操作符： =, <>, >, >=, <, <=, IS NULL, BETWEEN, LIKE, or IN() 
+  - **range**：表示利用索引查询的时候限制了范围，在指定范围内进行查询，这样避免了index的全索引扫描，适用的操作符： =, <>, >, >=, <, <=, IS NULL, BETWEEN, LIKE, or IN()
   - index_subquery：利用索引来关联子查询，不再扫描全表
   - unique_subquery：该连接类型类似与index_subquery,使用的是唯一索引
   - index_merge：在查询过程中需要多个索引组合使用
@@ -86,17 +81,11 @@ MyISAM 与 InnoDB的区别：
   - system：表只有一行记录（等于系统表），这是const类型的特例，平时不会出现
 
   **通常要求一个SQL的查询至少达到range级别，最好能达到ref**
-
 - possiable_keys： 显示可能应用在这张表中的索引，一个或多个，查询涉及到的字段上若存在索引，则该索引将被列出，但不一定被查询实际使用
-
 - **key**：实际使用的索引，如果为NULL，则没有使用索引，查询中若使用了覆盖索引，则该索引和查询的select字段重叠。
-
 - **key_len**：表示索引中使用的字节数，可以通过key_len计算查询中使用的索引长度，在不损失精度的情况下长度越短越好。
-
 - **ref**：显示索引的哪一列被使用了，如果可能的话，是一个常数
-
 - **rows**：根据表的统计信息及索引使用情况，大致估算出找出所需记录需要读取的行数，**此参数很重要，直接反应的sql找了多少数据，在完成目的的情况下越少越好**
-
 - **Extra**：包含额外的信息
 
   - using filesort:说明mysql无法利用索引进行排序，只能利用排序算法进行排序，会消耗额外的位置
@@ -105,8 +94,6 @@ MyISAM 与 InnoDB的区别：
   - using where:使用where进行条件过滤
   - using join buffer:使用连接缓存
   - impossible where：where语句的结果总是false
-
-
 
 ### 索引
 
@@ -157,11 +144,8 @@ MyISAM 与 InnoDB的区别：
 #### 回表，覆盖索引，最左匹配，索引下推
 
 - 回表：在普通索引下，索引树的叶子节点只存放了主键，当利用普通索引检索数据的时候，先拿到叶子节点的主键，再通过主键走主键索引树，从而从主键索引的叶子节点拿到数据行。
-
 - 覆盖索引，当需要查询的字段刚好处于索引的字段中，这时候，就不需要进行回表，直接返回索引的数据值
-
 - 最左匹配原则：在where中利用索引进行过滤时，条件的顺序需要和索引的顺序一致，否则不走索引
-
 - 索引下推：首先根据索引来查找记录，然后再根据where条件来过滤记录；在支持ICP优化后，MySQL会在取出索引的同时，判断是否可以进行where条件过滤再进行索引查询，也就是说提前执行where的部分过滤操作，在某些场景下，可以大大减少回表次数，从而提升整体性能。
 
   比如，现在staffs表的索引为index(name, age)，这时候利用select * from staffs where name like '王%' and age = 20;如果没有索引下推优化， 在 like '%王'之后的条件都不会走索引，假设like查询到了10条，那么就会一条条的去回表进行查询，最终就会回表10次，但是有了索引下推的优化，在查询索引的同时，就会去判断age，这样满足条件数据量就小了，回表的次数也就减少了，利用explain 可以看到Extra 输出 Using index condition
@@ -184,8 +168,6 @@ MyISAM 与 InnoDB的区别：
 
 #### 索引失效
 
-
-
 #### 页分裂和页合并
 
 ##### 页分裂
@@ -200,7 +182,7 @@ MyISAM 与 InnoDB的区别：
 
 ### 优化细则
 
-- 当使用索引列进行查询过滤时，尽量不要使用表达式，如 + 
+- 当使用索引列进行查询过滤时，尽量不要使用表达式，如 +
 - 尽量使用主键索引，而不是其他索引（二级索引），因为主键索引不会发生回表
 - 对存放字符长度比较长的字段使用前缀索引，前提是保证索引选择性，可以利用select count(distinct left(name, 3))/count(*) from staffs;计算出区分度，越接近去全值比例越好，alter table staffs add key (name(3));
 - 给order by 的列创建索引，利用索引进行排序
@@ -213,7 +195,6 @@ MyISAM 与 InnoDB的区别：
 - 能使用limit的时候尽量使用limit，当表的数据量很大的时候，可以用join的方式优化limit查询，如select * from staffs limit 100000,10;可以优化成select * from staffs s inner join (select staff_id from staffs limit 10000,10) b on b.staff_id = s.staff_id;
 - 单表索引建议控制在5个以内，
 - 单索引字段数不允许超过5个（组合索引），最大支持16个
-
 - join 和 exists：join 适合驱动表是小表，被驱动表是大表，exists适合驱动表是大表，被驱动表是小表
 - not in 和 not exists
 
@@ -252,12 +233,8 @@ PARTITION BY RANGE (YEAR(order_date))
 在MySQL中除了常见的错误日志，查询日志外，还有有以下几种日志类型：
 
 - **Redo log**: 是为了实现事务一致性，Redo log是InnoDB存储引擎下的日志，当事务开启后，发生数据修改的时候，InnoDB会先将数据更新到内存，而不是立刻就写入磁盘中，并记录redo log到os buffer中，此时redo log 进入prepare阶段，当发生事务的commit时，才一次性的进行fsync()将redo log 写入到磁盘日志文件中并标记redo log 为commit。当数据库服务失效重启后，通过redo log 就能够恢复数据，这样便实现了事务的一致性。
-
 - **Undo log**：是实现事务的原子性的基础，原子性要求事务是最小不可分割的操作单元，在事务中的操作要么全都成功，要么全部失败，没有中间状态。Undo log 在操作任何数据的新增修改前，首先会将数据备份到Undo log 中，然后再进行数据的修改，如果事务中的某个操作发生错误，需要回滚RollBack，则数据库引擎可以利用Undo log回退到事务开始之前的状态，Undo log 不仅可以实现事务的原子性，Mysql中的多版本并发控制MVCC机制也是利用Undo log实现。
-
 - **Bin log**：是MySQL Server层产生的日志，主要作用是用来数据库的恢复、备份或者复制，比如mysql集群模式下的slaver同步master的数据就是通过bin log。
-
-  
 
 #### MVCC 多版本并发控制
 
@@ -284,7 +261,4 @@ PARTITION BY RANGE (YEAR(order_date))
 - low_limit_id: 大于low_limit_id的事务ID是在创建ReadView之后产生的，对当前是不可见的。
 - trx_ids：应该是介于up_limit_id 和low_limit_id之间，即 up_limit_id < trx_ids < low_limit_id，如果版本对应的tx_id在tx_ids中，即不可见，如果不在trx_ids中，即在创建ReadView时已经提交了，所以对当前可见。
 
-
-
 ### Mysql中的锁
-

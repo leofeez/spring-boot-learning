@@ -100,25 +100,24 @@ NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了�
 
 ```java
     DefaultMQProducer producer = new DefaultMQProducer("orderly_producer_group");
-        producer.setNamesrvAddr("192.168.248.131:9876");
-        producer.start();
-
-        for (int i = 0; i < 20; i++) {
-            Message message = new Message("orderly_topic", ("order_" + i).getBytes());
-            producer.send(message, new MessageQueueSelector() {
-                @Override
-                public MessageQueue select(List<MessageQueue> mqs, Message msg, Object arg) {
-                    // 这里可以根据一定的规则将消息发送到指定的Queue中
-                    return mqs.get(0);
-                }
-            }, "");
-        }
+    producer.setNamesrvAddr("192.168.248.131:9876");
+    producer.start();   
+    for (int i = 0; i < 20; i++) {
+        Message message = new Message("orderly_topic", ("order_" + i).getBytes());
+        producer.send(message, new MessageQueueSelector() {
+            @Override
+            public MessageQueue select(List<MessageQueue> mqs, Message msg, Object arg) {
+                // 这里可以根据一定的规则将消息发送到指定的Queue中
+                return mqs.get(0);
+            }
+        }, "");
+    }
 ```
 
 ## 消费消息
 消费者消费，在RocketMQ中支持两种模式：
 - MessageModel.CLUSTERING（集群）: 该模式为默认的，类似于P2P模式，在该模式下，一个*ConsumerGroup*中只会有一个Consumer 会接收到对应的消息进行消费，如果多个consumerGroup
-  都同时订阅该Topic则，多个consumerGroup都会消费到数据，所以才有了集群的概念
+  都同时订阅该Topic则，多个consumerGroup都会消费到数据，所以才有了集群的概念。
    ```java
        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("hello_world_consumer_group");
        // Name Server
@@ -129,7 +128,8 @@ NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了�
        consumer.subscribe("hello_world", "*");
        // 注册消息监听
        consumer.registerMessageListener((MessageListenerConcurrently) (msgs, context) -> {
-           for (MessageExt msg : msgs) {   System.out.println(new String(msg.getBody()));
+           for (MessageExt msg : msgs) {
+                System.out.println(new String(msg.getBody()));
            }
            return ConsumeConcurrentlyStatus.CONSUME_SUCCESS;
        }); 
@@ -146,7 +146,7 @@ NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了�
 
 ### 消息过滤
 
--  通过 `Tag` 过滤消息
+-  通过 `Tag` 过滤消息，`Tag`是用于进行业务上的归类，如果说Topic是一级分类，那Tag就是二级分类
 
    1. 生产者生产消息时指定消息的具体`Tag`
    ```java
@@ -201,6 +201,9 @@ NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了�
        // 创建对应的过滤器 MessageSelector selector = MessageSelector.bySql("order > 5 and order <= 10 "); consumer.subscribe("test_tag", selector);   consumer.start();
    ```
 
+>Key 一般用于消息在业务层面的唯一标识。对发送的消息设置好 Key，以后可以根据这个 Key 来查找消息。比如消息异常，消息丢失，进行查找会很 方便。
+RocketMQ 会创建专门的索引文件，用来存储 Key 与消息的映射，由于是 Hash 索引，应尽量使 Key 唯一，避免潜在的哈希冲突。
+
 ### 如何保证消息消费的顺序
 在RocketMQ中，以Topic作为broker中最小的逻辑单位，在一个Topic中还包含若干个Queue，真正保存消息的其实还是Queue，只有在同一个Queue中的消息才是有序的，即FIFO。
 
@@ -232,6 +235,11 @@ NameServer 在RocketMQ中充当的角色就是注册中心，在内部维护了�
 
 1. 默认的消费者 `DefaultMQPushConsumer`，从该类的名称上看，消费消息的机制是按照Push的方式，其实在底层还是有consumer从broker中拉取消息。
 2. 消费者启动 `DefaultMQPushConsumer#start();`
+2. 消费者启动 `DefaultMQPushConsumerImpl#start();`
+3. 创建MQ客户端实例`this.mQClientFactory = MQClientManager.getInstance().getOrCreateMQClientInstance(this.defaultMQPushConsumer, this.rpcHook);`
+   这一步会初始化`PullMessageService`，用于执行拉取消息。
+4. `mQClientFactory.start();`
+5. `PullMessageService#start();` 执行`run()`，开始拉取消息。
 
 ## 消息持久化 CommitLog
 使用CommitLog
@@ -242,7 +250,7 @@ RocketMQ中提供了分布式事务的功能，常见的分布式事务的可以
 Half message
 
 ```java
-    TransactionMQProducer producer = new TransactionMQProducer("transaction_producer_group");
+        TransactionMQProducer producer = new TransactionMQProducer("transaction_producer_group");
         producer.setNamesrvAddr("192.168.248.131:9876");
 
         // Transaction Listener
@@ -291,9 +299,12 @@ RocketMQ的事务消息共有三个事务状态：
 ## RocketMQ 集群
 
 ### 主从模式
-在RocketMQ主从模型中，主从之间数据进行同步有两种方式，第一种数据同步是同步执行的，也就是类似于Zookeeper强一致性，这种性能会降低，
-第二种数据同步是异步的， 在RocketMQ的/conf配置目录下分别有2m-2s-sync和2m-2s-async两种配置。
+在RocketMQ主从模型中，主从之间数据进行同步有两种方式，
 
+- 同步双写：Master和Slaver之间的数据是同步的，也就是类似于Zookeeper强一致性，这种性能会降低，同步数据时只有超过半数的节点写入成功，整个同步过程才算成功。
+- 异步双写：Master和Slaver之间的数据是异步的，在宕机时可能会丢失少量数据。
+
+在RocketMQ的/conf配置目录下分别有`2m-2s-sync`和`2m-2s-async`两种配置：
 ```shell
 # 集群名称
 brokerClusterName=DefaultCluster
@@ -301,11 +312,11 @@ brokerClusterName=DefaultCluster
 brokerName=broker-a
 # 当brokerId为0 时代表是master，大于0就是slaver
 brokerId=0
-#
+# 何时删除过期的CommitLog文件，即凌晨4点
 deleteWhen=04
-# 
+# 指CommitLog的超时时间，以小时为单位
 fileReservedTime=48
-# broker 的角色
+# broker 的角色 ASYNC_MASTER、SLAVE
 brokerRole=ASYNC_MASTER
 # mq日志同步到commitlog中的机制
 flushDiskType=ASYNC_FLUSH
@@ -326,7 +337,21 @@ RocketMQ主从模型，依靠brokerName进行关联，整个集群是依靠clust
 # dleger
 enableDLegerCommitLog = true
 dLegerGroup = broker-a
-dLegerPeers = n0-192.168.150.210:40911;n1-192.168.150.211:40911
+dLegerPeers = n0-192.168.248.131:40911;n1-192.168.248.132:40911
 dLegerSelfId = n0
 sendMessageThreadPoolNums = 4
+```
+
+### 多Master集群
+在RocketMQ中的集群提供了多种方式：
+- 多master无slaver模式
+- 多master多slaver模式
+
+主从模式启动broker，指定对应的配置文件：
+
+```shell
+# 启动 master
+./mqbroker -c ../conf/2m-2s-async/broker-a.properties
+# 启动 slaver
+./mqbroker -c ../conf/2m-2s-async/broker-a-s.properties
 ```

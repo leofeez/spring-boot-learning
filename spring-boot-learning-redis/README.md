@@ -341,8 +341,8 @@ bgrewriteaof 触发AOP持久化
 单机Redis会存在以下几个问题：
 
 - 可能会发生单机故障
-- 容量有限，无法存放大量数据
 - 并发访问时压力大
+- 容量有限，无法存放大量数据
 
 对于单机故障可以利用主从，当master节点发生故障，可以故障转移到slaver，保证可用性。
 
@@ -362,6 +362,13 @@ redis slaver 可以利用 `replicaof <masterhost> <masterport>`
 
 
 ## Redis集群
+ [Redis 集群拆分原则AKF](https://blog.csdn.net/xhaimail/article/details/128429997)
+
+ [分布式AKF拆分原则](https://www.cnblogs.com/-wenli/p/13584796.html)
+
+腾讯面试题：一台机器10G内存，安装一个Redis实例分配10G内存和安装10个Redis实例各分配1G内存有什么区别？
+- 横向扩展 X：主从模式，解决单点故障，可以通过负载均衡缓解高并发场景单实例的访问压力，还可以实现读写分离（主负责读写，从负责读）。
+- 纵向扩展 Y：按业务拆分，根据业务模块划分，将不同模块的数据分别放到不同的Redis实例中，解决Redis数据存储容量的问题。
 
 对于Redis需要存储的数据可以进行拆分，拆分类型如下：
 

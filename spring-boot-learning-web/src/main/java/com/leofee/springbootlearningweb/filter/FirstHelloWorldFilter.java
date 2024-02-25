@@ -9,7 +9,9 @@ import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.annotation.WebFilter;
+import javax.servlet.http.HttpFilter;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
@@ -25,7 +27,7 @@ import java.io.IOException;
  */
 @Slf4j
 @WebFilter(filterName = "FirstHelloWorldFilter", urlPatterns = "/*")
-public class FirstHelloWorldFilter implements Filter {
+public class FirstHelloWorldFilter extends HttpFilter {
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -33,11 +35,10 @@ public class FirstHelloWorldFilter implements Filter {
     }
 
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+    public void doFilter(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws IOException, ServletException {
-        HttpServletRequest request = (HttpServletRequest) servletRequest;
         log.info(" before {} do filter, uri:{}", getClass(), request.getRequestURI());
-        filterChain.doFilter(servletRequest, servletResponse);
+        super.doFilter(request, response, filterChain);
         log.info("after {} do filter, uri:{}", getClass(), request.getRequestURI());
     }
 

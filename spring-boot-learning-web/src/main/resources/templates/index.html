@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Thymeleaf</title>
+</head>
+<body>
+<h1 th:text="${'当前在线人数：' + userCount}"></h1>
+<div th:object="${person}">
+    <h1 th:text="*{'恭喜登录：' + name}">Hello Thymeleaf</h1>
+</div>
+
+
+</body>
+</html>
