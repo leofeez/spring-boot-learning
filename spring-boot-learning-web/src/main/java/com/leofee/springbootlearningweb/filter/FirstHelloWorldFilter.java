@@ -19,8 +19,8 @@ import java.io.IOException;
  * 只能通过 Filter 的首字母进行排序
  *
  *
- *  <li>1.在 Filter 上增加注解 <code>@WebFilter(filterName = "helloWorldFilter", urlPatterns = "/*")</code>
- *  <li>2.在 启动类加上注解 <code>@ServletComponentScan</code>
+ *  <li> 在 Filter 上增加注解 <code>@WebFilter(filterName = "helloWorldFilter", urlPatterns = "/*")</code>
+ *  <li> 在 启动类加上注解 <code>@ServletComponentScan</code>
  *
  * @author leofee
  * @date 2019/6/26

@@ -1,8 +1,16 @@
-# spring boot Web 开发
+## 1. spring boot - hello world
+
+如何新建一个 spring boot 项目
+IDEA工具
+File -> new project 
+选中Spring Initializr，默认即可
+next ->
+  
+## 2. spring boot - web
+
+使用spring boot 进行web应用的开发
 
 ### 2.1 首先需要引入web模块
-
-只需要添加springboot中的web模块的starter即可，无需复杂的各种配置：
 
 ```xml
 <dependency>
@@ -10,7 +18,8 @@
     <artifactId>spring-boot-starter-web</artifactId>
 </dependency>
 ```
-### 2.2 编写Controller
+
+### 2.2 controller
 
 ```java
 @RestController
@@ -23,6 +32,10 @@ public class HelloWorld {
 }
 ```
 只需要在controller上加上 @RestController 注解即可，RestController代表当前Controller是一个rest风格，返回的数据类型是字符串，可以将对象转成对应的JSON字符返回，多用于前后端分离的场景。
+
+### 2.3 访问controller
+在启动类上点击 run main
+浏览器输入 http://localhost:8080/hello 就会出现 hello world!
 
 ## 添加自定义 Servlet，Filter，Listener
 在SpringBoot项目中，可以通过以下方式进行注册Servlet，Filter，Listener。
@@ -95,6 +108,8 @@ spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 ```
 
 在实际项目当中，如果有多个环境，那么配置文件就需要依据当前系统环境分别加载对应的配置文件，如dev，那么我们可以定义出一个application-dev.properties，这样在dev环境的时候SpringBoot就会根据spring.profiles.active中指定的值去加载dev环境对应的配置文件。
+
+只需要在controller上加上 `@RestController` 注解即可
 
 除了默认的application.properties之外，我们还可以让Springboot加载自定义配置文件
 
@@ -212,12 +227,12 @@ public class LoginController {
 
 
 
-
-
 ## 3. spring-boot 集成 jpa
 
 ### 3.1 引入jpa模块
+
 加入jpa的依赖
+
 ```xml
 <dependency>
     <groupId>org.springframework.boot</groupId>
@@ -229,8 +244,10 @@ public class LoginController {
     <artifactId>mysql-connector-java</artifactId>
 </dependency>
 ```
+
 ### 3.2 在配置文件中添加数据库的连接信息和jpa的配置
-```
+
+```text
 spring.datasource.url=jdbc:mysql://localhost:3306/spring-boot-learning
 spring.datasource.username=root
 spring.datasource.password=admin123
@@ -240,14 +257,15 @@ spring.jpa.properties.hibernate.hbm2ddl.auto=update
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL5InnoDBDialect
 spring.jpa.show-sql= true
 ```
+
 该参数的作用为: 自动创建，更新，验证数据库表结构，一共可选四种参数:
 
-1 `create`： 每次加载 hibernate 时都会删除上一次的生成的表，然后根据你的 model 类再重新来生成新表，
-哪怕两次没有任何改变也要这样执行，这就是导致数据库表数据丢失的一个重要原因。
-
-2 `create-drop` ：每次加载 hibernate 时根据 model 类生成表，但是 sessionFactory 一关闭,表就自动删除
-
-3 `update`：最常用的属性，第一次加载 hibernate 时根据 model 类会自动建立起表的结构（前提是先建立好数据库），
+- `create`： 每次加载 hibernate 时都会删除上一次的生成的表，然后根据你的 model 类再重新来生成新表，
+  哪怕两次没有任何改变也要这样执行，这就是导致数据库表数据丢失的一个重要原因。
+  
+- `create-drop` ：每次加载 hibernate 时根据 model 类生成表，但是 sessionFactory 一关闭,表就自动删除
+  
+- `update`：最常用的属性，第一次加载 hibernate 时根据 model 类会自动建立起表的结构（前提是先建立好数据库），
 以后加载 hibernate 时根据 model 类自动更新表结构，即使表结构改变了但表中的行仍然存在不会删除以前的行。
 要注意的是当部署到服务器后，表结构是不会被马上建立起来的，是要等 应用第一次运行起来后才会。
 
@@ -256,16 +274,17 @@ spring.jpa.show-sql= true
 ### 3.3 配置完成后新建一个实体和实体对应的Dao
 
 1 Dao 继承 JpaRepository 就可以使用已经定义好的基本的增删改查
-
-```
+    
+```java
 public interface PersonDao extends JpaRepository<Person, Long> {
 
     List<Person> findByName(String name);
 }
 ```
+
 2 在controller里调用
 
-```
+```java
 @RestController
 public class PersonController {
 
@@ -283,9 +302,10 @@ public class PersonController {
     }
 }
 ```
-3 利用mock mvc 的方式测试一下
 
-```
+3 利用mock mvc 的方式测试一下
+  
+```java
 @AutoConfigureMockMvc
 @SpringBootTest
 @RunWith(SpringJUnit4ClassRunner.class)
