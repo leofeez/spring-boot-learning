@@ -19,12 +19,12 @@
     <modules>
         <module>spring-boot-learning-starter</module>
         <module>spring-boot-learning-web</module>
-        <module>spring-boot-learning-core</module>
         <module>spring-boot-learning-redis</module>
         <module>spring-boot-learning-redisson</module>
         <module>spring-boot-learning-spi</module>
         <module>spring-boot-learning-zookeeper</module>
         <module>spring-boot-learning-mq</module>
+        <module>spring-boot-learning-kafka</module>
     </modules>
 
     <dependencies>
@@ -39,13 +39,6 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
-        </dependency>
-
-
-        <dependency>
-            <groupId>cn.hutool</groupId>
-            <artifactId>hutool-all</artifactId>
-            <version>5.7.16</version>
         </dependency>
     </dependencies>
 
